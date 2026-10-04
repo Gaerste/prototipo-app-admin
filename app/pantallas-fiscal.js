@@ -14,6 +14,7 @@
       D.OBLIGACIONES.forEach(o => { if (o.dia === d.n && ((o.mes || 'oct') === d.mes)) out.push(`<button class="ev ${o.estado === 'pagada' ? 'ok' : o.faltan <= 1 ? 'aviso' : 'info'}" data-abrir="obligacion:${o.id}" title="${esc(o.corto)}">${esc(o.corto)}</button>`); });
       D.PERMISOS_LIC.forEach(p => { if (d.mes === 'oct' && p.vence.startsWith(d.n + ' oct')) out.push(`<button class="ev alerta" data-abrir="permiso:${p.id}" title="${esc(p.nombre)}">Vence: ${esc(p.nombre.replace('Permiso de ', ''))}</button>`); });
       if (d.mes === 'oct' && d.n === 12) out.push('<span class="ev">Feriado</span>');
+      if (d.mes === 'oct' && d.n === 26) out.push('<span class="ev">Feriado bancario</span>');
       return out.join('');
     };
     return `<div class="cal" role="grid" aria-label="Octubre de 2026">${['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(x => `<div class="dsem">${x}</div>`).join('')}
@@ -133,7 +134,7 @@
   ACC['confirmar-z'] = id => { const z = D.ZETAS.find(x => x.id === id); z.estado = 'confirmado'; z.por = S.usuario.nombre; A.auditar({ modulo: 'Fiscal', registro: 'Z ' + z.num, campo: 'estado', antes: 'leído', despues: 'confirmado' }); A.pintarFicha(); A.pintarPagina(); A.aviso('Z confirmado.'); };
   ACC['subir-z'] = () => A.aviso('Se abriría la cámara del teléfono para fotografiar el Z de ayer. (Simulado)', 'info');
   FICHAS.ivalinea = k => {
-    const t = { z: ['Ventas a consumidor final', 'La suma de los Z de la quincena (16 al 30 de septiembre), menos las facturas con RIF que ya están dentro del Z.'], emp: ['Facturas a empresas', '3 facturas personalizadas con RIF del cliente.'], adic: ['Alícuota adicional', 'Licores: 31 % sobre la base, aparece separada en el Z.'] }[k];
+    const t = { z: ['Ventas a consumidor final', 'La suma de los Z de la quincena (16 al 30 de septiembre), menos las facturas con RIF que ya están dentro del Z.'], emp: ['Facturas a empresas', '3 facturas personalizadas con RIF del cliente.'], adic: ['Alícuota adicional (31 %)', 'Es la casilla «A» del Z: la alícuota de lujo (16 % + 15 %). Su lista (vehículos, motos, joyas, aeronaves, botes, máquinas de juego) no trae licores ni comida: en el restaurante va en cero y los licores pagan el 16 %. Si algún día trae monto, revisarlo con Cecilia.'] }[k];
     return { titulo: t[0], sub: 'Hoja de IVA', mod: 'fiscal', bloques: [{ html: `<p>${t[1]}</p>` }, k === 'z' ? { html: A.tabla({ cols: [{ t: 'Día', cls: 'p' }, { t: 'IVA', cls: 'r' }], filas: D.ZETAS.filter(z => z.iva).map(z => ({ abrir: 'zeta:' + z.id, celdas: [esc(z.fecha), dinero(z.iva, 'bs')] })) }) } : k === 'emp' ? { html: A.tabla({ cols: [{ t: 'Factura', cls: 'p' }, { t: 'IVA', cls: 'r' }], filas: D.VENTAS_EMPRESAS.map(v => ({ abrir: 'ventaemp:' + v.id, celdas: [esc(v.num + ' · ' + v.cliente), dinero(v.iva, 'bs')] })) }) } : { oculto: true }] };
   };
 
@@ -186,7 +187,8 @@
     return `<article class="hoja"><div class="hoja-cab"><h2>${ic('archivo')}Máquina fiscal</h2>${tag('Inspección vencida', 'alerta')}</div>
         <button class="fila" data-abrir="maquina:m1" style="padding-inline:0"><span class="medio"><b>${esc(m.modelo)}</b><small>Serial ${esc(m.serial)} · ${esc(m.ubicacion)} · último ${esc(m.ultimaZ)}</small></span>${ic('derecha', 's chev')}</button></article>
       <div class="sec"><h2>Permisos y licencias</h2>${A.boton('fiscal', 'Agregar un permiso', 'data-acc="pronto"', { tono: 'sec', icono: 'mas', chico: true })}</div>
-      ${A.tabla({ cols: [{ t: 'Permiso', cls: 'p' }, { t: 'Ente', cls: 'x' }, { t: 'N.º', cls: 'x' }, { t: 'Vence', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas: D.PERMISOS_LIC.map(p => ({ abrir: 'permiso:' + p.id, celdas: [`<b>${esc(p.nombre)}</b><small>${esc(p.ente)}${p.nota ? ' · ' + esc(p.nota) : ''}</small>`, esc(p.ente), esc(p.num), esc(p.vence) + (p.faltan !== null && p.faltan < 60 ? `<br><small class="muted">en ${p.faltan} días</small>` : ''), A.estadoTag(p.estado)] })) })}`;
+      ${A.tabla({ cols: [{ t: 'Permiso', cls: 'p' }, { t: 'Ente', cls: 'x' }, { t: 'N.º', cls: 'x' }, { t: 'Vence', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas: D.PERMISOS_LIC.map(p => ({ abrir: 'permiso:' + p.id, celdas: [`<b>${esc(p.nombre)}</b><small>${esc(p.ente)}${p.nota ? ' · ' + esc(p.nota) : ''}</small>`, esc(p.ente), esc(p.num), esc(p.vence) + (p.faltan !== null && p.faltan < 60 ? `<br><small class="muted">en ${p.faltan} días</small>` : ''), A.estadoTag(p.estado)] })) })}
+      <p class="muted">Desde el 12 de agosto el RIF ya no vence ni hay que colgarlo, pero su número sí va en facturas y anuncios. La copia de la declaración de ISLR: la ley la sigue pidiendo, aunque por ahora el SENIAT no la revisa. La licencia municipal sí se exhibe.</p>`;
   }
   FICHAS.permiso = id => {
     const p = D.PERMISOS_LIC.find(x => x.id === id);
@@ -216,9 +218,12 @@
   /* ---------- 9. preguntas para Cecilia ---------- */
   function preguntas() {
     const puedeResp = S.usuario.rol === 'fiscal_externo' || S.usuario.rol === 'dueno';
+    // las urgentes se nombran arriba sin cambiar el orden: los números se citan en otras pantallas
+    const urg = D.PREGUNTAS.map((q, i) => ({ q, n: i + 1 })).filter(x => x.q.urgente && x.q.estado === 'abierta');
     return `<p class="desc">Antes de construir la fase fiscal hacen falta estas respuestas. Cecilia las contesta aquí mismo y Alejandro las ve al instante.</p>
+      ${urg.length ? `<p class="nota aviso">${ic('alerta', 's')}<span><b>${urg.length === 1 ? 'Una no puede esperar' : urg.length + ' no pueden esperar'}:</b> ${urg.map(x => `la ${x.n} (${esc(x.q.corto || '')}${x.q.urgente !== 'Urgente' ? ', ' + esc(x.q.urgente.toLowerCase()) : ''})`).join(' y ')}.</span></p>` : ''}
       <ul class="lista">${D.PREGUNTAS.map((q, i) => `<li style="padding:14px;display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><b>${i + 1}. ${esc(q.texto)}</b>${A.estadoTag(q.estado)}</div>
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><b>${i + 1}. ${esc(q.texto)}</b><span class="fila-tags">${q.urgente && q.estado === 'abierta' ? tag(q.urgente, 'aviso') : ''}${A.estadoTag(q.estado)}</span></div>
         ${puedeResp ? `<label class="campo" for="q-${q.id}"><span class="sr-only">Respuesta</span><textarea id="q-${q.id}" placeholder="Escribe tu respuesta">${esc(q.resp)}</textarea></label><div><button class="btn sec chico" data-acc="responder" data-arg="${q.id}">${ic('check', 's')}Guardar respuesta</button></div>` : (q.resp ? `<p class="muted">${esc(q.resp)}</p>` : '<p class="muted">Sin respuesta todavía.</p>')}
       </li>`).join('')}</ul>`;
   }
@@ -226,7 +231,7 @@
 
   /* ---------- 10. configuración fiscal ---------- */
   function config() {
-    const filasObl = [['IVA + anticipo + IGTF + ret. IVA', 'SENIAT', 'Quincenal', 'Calendario SPE, dígito 4', 'Cecilia', 5], ['Retenciones de ISLR', 'SENIAT', 'Mensual', 'Calendario SPE', 'Cecilia', 5], ['Pensiones (9 %)', 'SENIAT', 'Mensual', 'Calendario de pensiones', 'Jose', 5], ['IVSS y paro forzoso', 'IVSS', 'Mensual', 'Día fijo', 'Jose', 3], ['FAOV', 'BANAVIH', 'Mensual', 'Día fijo', 'Jose', 3], ['INCES', 'INCES', 'Trimestral', '5 días tras el trimestre', 'Jose', 5], ['Patente', 'Alcaldía', 'Mensual', 'Primeros 20 días', 'Cecilia', 5], ['LOCTI', 'SIDCAI', 'Mensual', 'No inscritos · gracia hasta abr 2027', '—', 30], ['Deporte (1 %)', 'IND', 'Anual', 'Omitida por decisión', '—', 0]];
+    const filasObl = [['IVA + anticipo + IGTF + ret. IVA', 'SENIAT', 'Quincenal', 'Calendario SPE, dígito 4', 'Cecilia', 5], ['Retenciones de ISLR', 'SENIAT', 'Mensual', 'Calendario SPE', 'Cecilia', 5], ['Pensiones (9 %)', 'SENIAT', 'Mensual', 'Calendario de pensiones', 'Jose', 5], ['IVSS y paro forzoso', 'IVSS', 'Mensual', 'Día fijo', 'Jose', 3], ['FAOV', 'BANAVIH', 'Mensual', 'Día fijo', 'Jose', 3], ['INCES', 'INCES', 'Trimestral', '5 días tras el trimestre', 'Jose', 5], ['Patente', 'Alcaldía', 'Mensual', 'Primeros 20 días', 'Cecilia', 5], ['LOCTI', 'SIDCAI', 'Mensual', 'No inscritos · gracia hasta abr 2027', '—', 30], ['Deporte (1 %)', 'IND', 'Anual', 'Omitida por decisión', '—', 0], ['Publicidad (aviso del toldo)', 'Alcaldía', 'Mensual', 'Cada mes, o el año entero antes del 31 mar con 15 % de rebaja', 'Cecilia', 5], ['Grandes Patrimonios', 'SENIAT', 'Anual · 2 fechas', '14 oct y 12 nov (RIF 1 y 4) · ¿declaración en cero? Por confirmar con Cecilia', 'Cecilia', 5]];
     return `<div class="rejilla"><div class="c8 pila"><div class="sec"><h2>Obligaciones</h2>${A.boton('fiscal', 'Cargar el calendario 2027', 'data-acc="pronto"', { tono: 'sec', icono: 'calendario', chico: true })}</div>
         ${A.tabla({ cols: [{ t: 'Obligación', cls: 'p' }, { t: 'Frecuencia', cls: 'x' }, { t: 'Cómo vence', cls: 'x' }, { t: 'Responsable', cls: 'r' }, { t: 'Aviso', cls: 'e' }], filas: filasObl.map(f => ({ abrir: 'oblconf:' + f[0], celdas: [`<b>${esc(f[0])}</b><small>${esc(f[1])}</small>`, esc(f[2]), esc(f[3]), esc(f[4]), f[5] ? f[5] + ' días antes' : tag('Inactiva', '')] })) })}
         <p class="muted">Cada diciembre el SENIAT publica el calendario del año siguiente. Se carga una vez y la app arma todos los vencimientos.</p></div>

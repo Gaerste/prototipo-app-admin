@@ -242,7 +242,7 @@ window.DB = (() => {
   /* ---------- fiscal ---------- */
   // fechas de octubre 2026 del calendario SENIAT para RIF terminado en 4 (públicas)
   const OBLIGACIONES = [
-    { id: 'o1', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 2.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 2.ª quincena', dia: 6, vence: 'Mar 6 oct', faltan: 1, resp: 'Cecilia', estado: 'revision', monto: 18452.30, paso: 1 },
+    { id: 'o1', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 2.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 2.ª quincena', dia: 6, vence: 'Mar 6 oct', faltan: 1, resp: 'Cecilia', estado: 'revision', monto: 17150.30, paso: 1 },
     { id: 'o2', nombre: 'Retenciones de ISLR de septiembre', corto: 'Ret. ISLR sep', ente: 'SENIAT', periodo: '2026-09', dia: 6, vence: 'Mar 6 oct', faltan: 1, resp: 'Cecilia', estado: 'preparar', monto: 412.80, paso: 0 },
     { id: 'o3', nombre: 'INCES 3.er trimestre', corto: 'INCES T3', ente: 'INCES', periodo: '2026 · T3', dia: 5, vence: 'Hoy, lun 5 oct', faltan: 0, resp: 'Jose', estado: 'lista', monto: 236.40, paso: 2 },
     { id: 'o4', nombre: 'IVSS y paro forzoso', corto: 'IVSS sep', ente: 'IVSS (TIUNA)', periodo: '2026-09', dia: 9, vence: 'Vie 9 oct', faltan: 4, resp: 'Jose', estado: 'preparar', monto: 596.10, paso: 0 },
@@ -251,11 +251,11 @@ window.DB = (() => {
     { id: 'o7', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 1.ª quinc. oct', ente: 'SENIAT', periodo: '2026-10 · 1.ª quincena', dia: 22, vence: 'Jue 22 oct', faltan: 17, resp: 'Cecilia', estado: 'abierta', monto: null, paso: 0 },
     { id: 'o8', nombre: 'Pensiones (9 % sobre la nómina formal)', corto: 'Pensiones sep', ente: 'SENIAT', periodo: '2026-09', dia: 22, vence: 'Jue 22 oct', faltan: 17, resp: 'Jose', estado: 'preparar', monto: 354.60, paso: 0 },
     { id: 'o9', nombre: 'IVA 1.ª quincena de septiembre', corto: 'IVA 1.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 1.ª quincena', dia: 30, mes: 'sep', vence: 'Mié 30 sep', faltan: -5, resp: 'Cecilia', estado: 'pagada', monto: 16980.75, paso: 4 },
-    { id: 'o10', nombre: 'Pensiones de agosto', corto: 'Pensiones ago', ente: 'SENIAT', periodo: '2026-08', dia: 30, mes: 'sep', vence: 'Mié 30 sep', faltan: -5, resp: 'Jose', estado: 'pagada', monto: 341.20, paso: 4 },
+    { id: 'o10', nombre: 'Pensiones de agosto', corto: 'Pensiones ago', ente: 'SENIAT', periodo: '2026-08', dia: 16, mes: 'sep', vence: 'Mié 16 sep', faltan: -19, resp: 'Jose', estado: 'pagada', monto: 341.20, paso: 4 },
   ];
   const IVA_HOJA = {
     periodo: '2.ª quincena de septiembre (16 al 30)', vence: 'Mar 6 oct',
-    debitos: [['Ventas a consumidor final (los Z)', 182340.00, 29174.40], ['Facturas a empresas', 9800.00, 1568.00], ['Alícuota adicional (licores)', 4200.00, 1302.00]],
+    debitos: [['Ventas a consumidor final (los Z)', 182340.00, 29174.40], ['Facturas a empresas', 9800.00, 1568.00], ['Alícuota adicional 31 % (lujo: va en cero)', 0, 0]],
     creditos: [['Compras del libro de Cecilia', 70412.50, 11266.00]],
     retRecibidas: 1240.80, excedente: 1085.30, igtf: 2318.40, anticipo: 1923.40,
   };
@@ -306,7 +306,7 @@ window.DB = (() => {
     { id: 'pl3', nombre: 'Licencia de actividades económicas', ente: 'Alcaldía de Valencia', num: 'LAE-0000', vence: '10 mar 2028', faltan: 522, estado: 'vigente', aviso: 60 },
     { id: 'pl4', nombre: 'Permiso sanitario', ente: 'Salud (SACS)', num: 'PS-0000', vence: '2 feb 2027', faltan: 120, estado: 'vigente', aviso: 30 },
     { id: 'pl5', nombre: 'Conformidad de uso', ente: 'Alcaldía de Valencia', num: 'CU-0000', vence: 'Sin vencimiento', faltan: null, estado: 'vigente', aviso: 0 },
-    { id: 'pl6', nombre: 'Publicidad (aviso del toldo)', ente: 'Alcaldía de Valencia', num: '—', vence: '31 dic 2026', faltan: 87, estado: 'en_tramite', aviso: 30 },
+    { id: 'pl6', nombre: 'Publicidad (aviso del toldo)', ente: 'Alcaldía de Valencia', num: '—', vence: '31 dic 2026', faltan: 87, estado: 'en_tramite', aviso: 30, nota: 'El impuesto va aparte: cada mes, o el año entero antes del 31 mar con 15 % de rebaja' },
   ];
   const PAQUETE = [
     ['Reportes Z de septiembre', '28 de 30', 'aviso'],
@@ -328,6 +328,11 @@ window.DB = (() => {
     { id: 'q9', texto: '¿Llevas Diario, Mayor e Inventarios sellados? ¿Hay asamblea y comisario?', resp: 'Sí, sellados. La asamblea se hace en marzo.', estado: 'respondida' },
     { id: 'q10', texto: '¿Cuántos días de utilidades? ¿LOCTI al 0,5 % o al 2 %?', resp: '', estado: 'abierta' },
     { id: 'q11', texto: '¿El consumo de los socios y del personal se declara en el IVA como retiro de bienes (autoconsumo)? ¿A precio de carta o a costo?', resp: '', estado: 'abierta' },
+    { id: 'q12', texto: 'Grandes Patrimonios (14 oct y 12 nov): ¿hay que presentar la declaración aunque no lleguemos al mínimo? ¿Qué toca en cada fecha?', resp: '', estado: 'abierta', urgente: 'Antes del mié 14 oct', corto: 'Grandes Patrimonios' },
+    { id: 'q13', texto: 'El delivery pedido por WhatsApp o Instagram y pagado por pago móvil, Zelle o Binance, ¿cuenta como venta por medios electrónicos y lleva factura digital?', resp: '', estado: 'abierta' },
+    { id: 'q14', texto: 'Pensiones de agosto: vencían el miércoles 16 de septiembre, no el 30. Si se pagaron después del 16, ¿cuánto son la multa y los intereses y cómo se regulariza?', resp: '', estado: 'abierta', urgente: 'Urgente', corto: 'pensiones de agosto' },
+    { id: 'q15', texto: 'RIF en la publicidad (norma de agosto): ¿qué piezas lo deben llevar? ¿Anuncios pagados, posts de venta, flyers, menú de delivery, carta de mesa, pendón del toldo?', resp: '', estado: 'abierta' },
+    { id: 'q16', texto: 'Casilla de 31 % del Z: ¿confirmas que va siempre en cero y que los licores pagan el 16 %?', resp: '', estado: 'abierta' },
   ];
 
   /* ---------- documentos ---------- */
@@ -382,13 +387,13 @@ window.DB = (() => {
     negocio: { nombre: 'Restaurante (nombre de ejemplo)', razon: 'Razón social de ejemplo, C.A.', rif: 'J-0000000-4', zona: 'America/Caracas (UTC−4)', monedaBase: 'Dólar (USD)', carta: 'Euro BCV', espec: 'Sí (contribuyente especial)' },
     sedes: [{ id: 'se1', nombre: 'Valencia', corte: '04:00', direccion: 'Dirección de ejemplo', activa: true }],
     tasas: { fuente: 'BCV por n8n a las 16:00 y 7:30', respaldo: 'Carga a mano si a las 9:00 no llegó', usdt: 'Promedio de compra P2P a las 7:30', finde: 'Vale la última publicada' },
-    legales: [['Salario mínimo', 'Bs 130,00', 'desde 1 may 2022'], ['Unidad tributaria (UT)', 'Bs 43,00', 'desde 1 jun 2025'], ['Base de pensiones por trabajador', '$ 240', 'desde 2026'], ['Cestaticket (bono)', '$ 40', 'desde 1 may 2025']],
-    alicuotas: [['IVA general', '16 %'], ['IVA reducida', '8 %'], ['IVA adicional (licores)', '31 %'], ['IGTF (cobros en divisas)', '3 %'], ['Retención de IVA a proveedores', '75 % (100 % si la factura falla)']],
+    legales: [['Salario mínimo', 'Bs 130,00', 'desde mar 2022'], ['Unidad tributaria (UT)', 'Bs 43,00', 'desde 2 jun 2025'], ['Base de pensiones por trabajador', '$ 240', 'desde el período de abril 2026'], ['Cestaticket (bono)', '$ 40', 'a la tasa BCV del día de pago · nunca salió en Gaceta']],
+    alicuotas: [['IVA general', '16 %'], ['IVA reducida', '8 %'], ['IVA de lujo (16 % + 15 %)', 'No aplica: su lista no trae licores ni comida'], ['IGTF (cobros en divisas)', '3 %'], ['Retención de IVA a proveedores', '75 % (100 % si la factura falla)']],
     metodos: [['Pago móvil Venezolano', 'BVCA'], ['Transferencia Venezolano', 'BVCJ'], ['Punto de venta (terminal 1)', 'BVCA'], ['Zelle', 'ZEL'], ['Binance', 'BIN'], ['Efectivo $', 'Caja → Bóveda'], ['Cuenta de cliente', 'Cobranza']],
     tiposMov: [['Retiro de socio', 'Aprobación: no · foto: sí'], ['Pago a proveedor', 'Aprobación: lote del lunes · comprobante: sí'], ['Traspaso entre cuentas', 'Aprobación: no · comprobante: sí'], ['Gasto de caja chica', 'Aprobación: más de $ 40 · soporte: sí'], ['Pago de impuesto', 'Aprobación: sí · planilla: sí'], ['Devolución a cliente', 'Aprobación: Jose o Alejandro · comprobante: sí'], ['Préstamo a empleado', 'Aprobación: Alejandro · autorización firmada: sí'], ['Consumo de socio', 'Viene del POS (método «Consumo socio»)']],
     categorias: ['Proteína', 'Lácteos', 'Vegetales', 'Bebidas', 'Panadería', 'Empaques', 'Limpieza', 'Servicios'],
     reglas: [
-      ['Lista de los lunes', 'Se arma sola el lunes a las 6:00 con todo lo que vence antes del lunes siguiente'],
+      ['Lista de los lunes', 'Se arma sola el lunes a las 6:00 con todo lo que vence antes del lunes siguiente. Si ese lunes es feriado bancario (en 2026: 12 y 26 oct, 23 nov y 14 dic), lo avisa y propone pagar el martes'],
       ['Plazo por defecto', '7 días (cada proveedor puede tener el suyo)'],
       ['Ventana de deuda', 'Últimos 3 meses'],
       ['Devoluciones', 'Repone el 50 %, el resto es merma (editable por proveedor)'],
