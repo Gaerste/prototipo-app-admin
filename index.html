@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Prototipo clicable de una app administrativa para un restaurante. Todos los datos son inventados.">
+<style>body{margin:0}</style>
+<title>Prototipo app administrativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Zilla+Slab:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="app/estilos.css">
+</head>
+<body>
+<header class="proto">
+  <div class="proto-in">
+    <div class="proto-marca"><strong>Prototipo</strong><span>Datos inventados · nada es real</span></div>
+    <div class="proto-ctl">
+      <label for="ver-como">Ver como <select id="ver-como"></select></label>
+      <div class="proto-seg solo-ancho" role="group" aria-label="Formato">
+        <button data-formato="tel" aria-pressed="false">Teléfono</button>
+        <button data-formato="ipad" aria-pressed="false">iPad</button>
+        <button data-formato="compu" aria-pressed="true">Computadora</button>
+      </div>
+      <button class="proto-btn solo-ancho" id="pantalla-completa" type="button">Pantalla completa</button>
+      <button class="proto-btn" id="ver-revision" type="button">Lo que falta</button>
+      <button class="proto-btn" id="salir" type="button">Cerrar sesión</button>
+    </div>
+  </div>
+</header>
+
+<div class="stage" id="stage" data-formato="compu">
+  <div class="device" id="device">
+    <div class="app" id="app"></div>
+  </div>
+</div>
+
+<script src="app/datos.js"></script>
+<script src="app/datos-gente.js"></script>
+<script src="app/nucleo.js"></script>
+<script src="app/ui.js"></script>
+<script src="app/pantallas-hoy.js"></script>
+<script src="app/pantallas-dinero.js"></script>
+<script src="app/pantallas-efectivo.js"></script>
+<script src="app/pantallas-fiscal.js"></script>
+<script src="app/pantallas-rrhh.js"></script>
+<script src="app/pantallas-agenda.js"></script>
+<script src="app/pantallas-gente.js"></script>
+<script src="app/pantallas-sistema.js"></script>
+<script>window.APP.arrancar();</script>
+</body>
+</html>
