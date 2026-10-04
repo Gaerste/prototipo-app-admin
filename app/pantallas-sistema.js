@@ -29,14 +29,18 @@
   ACC['guardar-matriz'] = () => A.pedirCodigo('Guardar los cambios de permisos.').then(() => { A.auditar({ modulo: 'Usuarios', registro: 'Matriz de permisos', campo: 'permisos', despues: matrizCambios + ' cambios' }); matrizCambios = 0; A.pintarPagina(); A.aviso('Permisos guardados. Ya rigen para todos los que tienen esos roles.'); }).catch(() => {});
   function aprobaciones() {
     return `<div class="rejilla"><div class="c7 pila"><div class="sec"><h2>Quién aprueba qué</h2></div>
-        ${A.tabla({ cols: [{ t: 'Qué', cls: 'p' }, { t: 'Aprueba hasta', cls: 'r' }, { t: 'Si pasa, aprueba', cls: 'e' }], filas: D.LIMITES.map(l => ({ abrir: 'limite:' + l.id, celdas: [`<b>${esc(l.que)}</b><small>${esc(l.quien)}</small>`, l.hasta === null ? 'Sin límite' : dinero(l.hasta, l.mon, 0), esc(l.arriba)] })) })}
+        ${A.tabla({ cols: [{ t: 'Qué', cls: 'p' }, { t: 'Aprueba hasta', cls: 'r' }, { t: 'Si pasa, aprueba', cls: 'e' }], filas: D.LIMITES.map(l => ({ abrir: 'limite:' + l.id, celdas: [`<b>${esc(l.que)}</b><small>${esc(l.quien)}${l.cond ? ', ' + esc(l.cond) : ''}</small>`, l.hasta === null ? 'Sin límite' : dinero(l.hasta, l.mon, 0), esc(l.arriba)] })) })}
         <p class="muted">Los montos son propuestas para arrancar; se ajustan con la app andando. Alejandro no tiene límite.</p></div>
-      <div class="c5 pila"><article class="hoja"><h2>${ic('usuario')}Suplente</h2><p>Si una aprobación espera más de <b>24 horas</b>, pasa al suplente.</p><dl class="kv"><div><dt>Suplente de Alejandro</dt><dd>${tag('Nadie todavía', 'aviso')}</dd></div><div><dt>Propuesta</dt><dd>Eliana, si edita</dd></div></dl>${A.boton('usuarios', 'Nombrar suplente', 'data-acc="pronto"', { tono: 'sec', icono: 'usuario', permiso: 'aprobar' })}</article>
-        <article class="hoja"><h2>${ic('escudo')}Reglas que no se saltan</h2><ul class="tiempo"><li><time>1</time><span>Quien prepara, quien revisa y quien aprueba son personas distintas. Lo cumple la propia base de datos.</span></li><li><time>2</time><span>Los bots y los agentes solo proponen. Nunca aprueban salidas de plata.</span></li><li><time>3</time><span>Aprobar, anular, mover la bóveda o cambiar una cuenta pide el código otra vez.</span></li></ul></article></div></div>`;
+      <div class="c5 pila"><article class="hoja"><h2>${ic('usuario')}Suplente</h2><dl class="kv"><div><dt>Suplente</dt><dd>Por ahora, Alejandro mismo</dd></div><div><dt>Si algo espera más de 24 horas</dt><dd>La app se lo recuerda</dd></div></dl><p class="muted">Otro se nombra con la app andando (decidido el 3-oct).</p></article>
+        <article class="hoja"><h2>${ic('escudo')}Reglas que no se saltan</h2><ul class="tiempo"><li><time>1</time><span>Quien prepara, quien revisa y quien aprueba son personas distintas. Lo cumple la propia base de datos.</span></li><li><time>2</time><span>Los bots y los agentes proponen. Solo escriben directo las tasas y los pagos que lee el bot de caja. Excepción: el bot de la bóveda registra al instante si todo cuadra, a nombre de quien mandó la foto y marcado «sin doble factor»; si algo falla, queda «por revisar».</span></li><li><time>3</time><span>Aprobar, anular, mover la bóveda, cambiar una cuenta, editar roles o exportar pide el código otra vez.</span></li></ul></article></div></div>`;
   }
+  // cómo escribe cada cuenta de servicio: la regla 2 de «Quién aprueba qué»
+  const MODO = { directo: ['Escribe directo', 'info'], si_cuadra: ['Excepción: escribe si cuadra', 'info'], propone: ['Solo propone', 'lila'] };
+  const modoTag = s => tag(...(MODO[s.modo] || MODO.propone));
   function bots() {
     return `<p class="desc">Los programas que trabajan con la app (n8n, el bot de caja, los agentes de IA) entran con su propia cuenta, como una persona más, y cada uno tiene un humano responsable.</p>
-      ${A.tabla({ cols: [{ t: 'Cuenta', cls: 'p' }, { t: 'Puede', cls: 'x' }, { t: 'Responsable', cls: 'x' }, { t: 'Vence la clave', cls: 'r x' }, { t: 'Tipo', cls: 'e' }], filas: D.SERVICIO.map(s => ({ abrir: 'servicio:' + s.id, celdas: [`<b class="mono">${esc(s.nombre)}</b><small>Último uso ${esc(s.ultimo)}</small>`, esc(s.puede), esc(s.responsable), esc(s.vence), s.directo ? tag('Escribe directo', 'info') : tag('Solo propone', 'lila')] })) })}
+      ${A.tabla({ cols: [{ t: 'Cuenta', cls: 'p' }, { t: 'Puede', cls: 'x' }, { t: 'Responsable', cls: 'x' }, { t: 'Vence la clave', cls: 'r x' }, { t: 'Tipo', cls: 'e' }], filas: D.SERVICIO.map(s => ({ abrir: 'servicio:' + s.id, celdas: [`<b class="mono">${esc(s.nombre)}</b><small>${/^Todavía/.test(s.ultimo) ? esc(s.ultimo) : 'Último uso ' + esc(s.ultimo)}</small>`, esc(s.puede), esc(s.responsable), esc(s.vence), modoTag(s)] })) })}
+      <p class="muted">Solo escriben directo las tasas y los pagos que lee el bot de caja. El bot de la bóveda es la excepción: registra al instante si todo cuadra; si algo falla, queda «por revisar». Las facturas que lee el agente esperan a que Jose o Alejandro las aprueben.</p>
       ${A.boton('usuarios', 'Crear una cuenta de servicio', 'data-acc="pronto"', { tono: 'sec', icono: 'llave', permiso: 'aprobar' })}`;
   }
   PANT.usuarios = {
@@ -52,7 +56,9 @@
     if (u.dosfa && !yo) acc.push({ txt: 'Resetear su código', acc: 'reset-2fa', arg: id, icono: 'refrescar', solo: 'aprobar' });
     if (u.estado === 'invitada') acc.push({ txt: 'Reenviar invitación', acc: 'reenviar', arg: id, icono: 'enviar', solo: 'aprobar' });
     if (u.estado === 'por_confirmar') acc.push({ txt: 'Confirmar acceso', acc: 'confirmar-u', arg: id, icono: 'check', tono: 'pri', solo: 'aprobar' });
-    return { titulo: A.nombreDe(u), sub: esc(u.correo), mod: 'usuarios', obj: u, registro: 'Usuario ' + A.nombreDe(u), tags: [[D.ROLES[u.rol].nombre, 'info']].concat(u.estado !== 'activo' ? [[estadoU(u).replace(/<[^>]+>/g, ''), u.estado === 'aprendiz' ? 'lila' : 'aviso']] : []),
+    // si el nombre del rol ya dice «por confirmar», no se repite la etiqueta del estado
+    const repite = u.estado === 'por_confirmar' && /por confirmar/.test(D.ROLES[u.rol].nombre);
+    return { titulo: A.nombreDe(u), sub: esc(u.correo), mod: 'usuarios', obj: u, registro: 'Usuario ' + A.nombreDe(u), tags: [[D.ROLES[u.rol].nombre, 'info']].concat(u.estado !== 'activo' && !repite ? [[estadoU(u).replace(/<[^>]+>/g, ''), u.estado === 'aprendiz' ? 'lila' : 'aviso']] : []),
       bloques: [
         { titulo: 'Acceso', filas: [{ l: 'Rol', v: esc(D.ROLES[u.rol].nombre), campo: { k: 'rol', tipo: 'select', opciones: Object.entries(D.ROLES).map(([k, r]) => [k, r.nombre]), sensible: true } }, { l: 'Qué puede', v: esc(D.ROLES[u.rol].desc), largo: true }, { l: 'Código (doble factor)', v: u.dosfa ? tag('Activo', 'ok') : tag('Sin activar', 'aviso') }, { l: 'Último acceso', v: esc(u.ultimo) }, { l: 'Sede', v: 'Valencia' }] },
         u.extra.length ? { titulo: 'Además', html: `<p>${esc(u.extra.join(', '))}.</p>` } : { oculto: true },
@@ -98,12 +104,16 @@
   FICHAS.limite = id => {
     const l = D.LIMITES.find(x => x.id === id);
     return { titulo: l.que, sub: 'Quién aprueba qué', mod: 'usuarios', obj: l, registro: 'Límite: ' + l.que,
-      bloques: [{ filas: [{ l: 'Quién aprueba', v: esc(l.quien), campo: { k: 'quien', tipo: 'texto' } }, { l: 'Hasta ($)', v: l.hasta === null ? 'Sin límite' : dinero(l.hasta, 'usd', 0), campo: l.hasta === null ? undefined : { k: 'hasta', tipo: 'dinero', sensible: true } }, { l: 'Si pasa del límite', v: esc(l.arriba) }] }] };
+      bloques: [{ filas: [{ l: 'Quién aprueba', v: esc(l.quien), campo: { k: 'quien', tipo: 'texto' } }, ...(l.cond ? [{ l: 'Condición', v: esc(l.cond) }] : []), { l: 'Hasta ($)', v: l.hasta === null ? 'Sin límite' : dinero(l.hasta, 'usd', 0), campo: l.hasta === null ? undefined : { k: 'hasta', tipo: 'dinero', sensible: true } }, { l: 'Si pasa del límite', v: esc(l.arriba) }] }] };
   };
   FICHAS.servicio = id => {
     const s = D.SERVICIO.find(x => x.id === id);
-    return { titulo: s.nombre, sub: s.tipo === 'bot' ? 'Bot' : 'Agente de IA', mod: 'usuarios', obj: s, tags: [[s.directo ? 'Escribe directo' : 'Solo propone', s.directo ? 'info' : 'lila']],
-      bloques: [{ filas: [{ l: 'Qué puede', v: esc(s.puede), largo: true }, { l: 'Humano responsable', v: esc(s.responsable) }, { l: 'Vence la clave', v: esc(s.vence) }, { l: 'Último uso', v: esc(s.ultimo) }, { l: 'Límite', v: '120 llamadas por minuto' }] }, { html: '<p class="muted">La clave se guarda cifrada y se ve una sola vez al crearla. Todo lo que el bot registra queda a su nombre en el registro de cambios.</p>' }],
+    // el bot de la bóveda registra a nombre de quien mandó la foto (3 oct); los demás, a su propio nombre
+    const aNombre = s.modo === 'si_cuadra'
+      ? 'Lo que registra queda a nombre de la persona que mandó la foto al grupo, marcado «sin doble factor». En el registro de cambios se ve que lo llevó el bot.'
+      : s.modo === 'propone' ? 'No registra nada solo: lo que propone queda esperando a que una persona lo apruebe, y queda a nombre de quien lo aprobó.' : 'Todo lo que el bot registra queda a su nombre en el registro de cambios.';
+    return { titulo: s.nombre, sub: s.tipo === 'bot' ? 'Bot' : 'Agente de IA', mod: 'usuarios', obj: s, tags: [MODO[s.modo] || MODO.propone],
+      bloques: [{ filas: [{ l: 'Qué puede', v: esc(s.puede), largo: true }, { l: 'A nombre de quién queda', v: s.modo === 'si_cuadra' ? 'De quien mandó la foto' : s.modo === 'propone' ? 'De quien lo aprueba' : 'Del bot' }, { l: 'Humano responsable', v: esc(s.responsable) }, { l: 'Vence la clave', v: esc(s.vence) }, { l: 'Último uso', v: esc(s.ultimo) }, { l: 'Límite', v: '120 llamadas por minuto' }] }, { html: `<p class="muted">La clave se guarda cifrada y se ve una sola vez al crearla. ${aNombre}</p>` }],
       acciones: [{ txt: 'Revocar la clave', acc: 'revocar', arg: id, icono: 'anular', tono: 'peligro', solo: 'aprobar' }] };
   };
   ACC.revocar = id => A.pedirCodigo('Revocar la clave de ' + D.SERVICIO.find(x => x.id === id).nombre + '. Dejará de funcionar al instante.').then(() => A.aviso('Clave revocada. (Simulado)')).catch(() => {});
@@ -116,7 +126,7 @@
     return `<div class="rejilla"><div class="c6 pila"><article class="hoja"><h2>Negocio</h2><ul class="lista" style="border:0">
         ${filaParam('n-nombre', 'Nombre', esc(N.nombre))}${filaParam('n-razon', 'Razón social', esc(N.razon))}${filaParam('n-rif', 'RIF', esc(N.rif), 'El último dígito decide el calendario del SENIAT')}${filaParam('n-espec', 'Contribuyente especial', esc(N.espec))}${filaParam('n-zona', 'Zona horaria', esc(N.zona))}${filaParam('n-moneda', 'Moneda base', esc(N.monedaBase))}${filaParam('n-carta', 'Precios de la carta en', esc(N.carta))}</ul></article></div>
       <div class="c6 pila"><article class="hoja"><h2>Sede</h2><ul class="lista" style="border:0">${filaParam('s-nombre', 'Sede', esc(s.nombre), 'Hoy solo existe una. La tabla queda para vender la app a otro restaurante.')}${filaParam('s-corte', 'Hora de corte del día', esc(s.corte), 'Lo vendido antes de las 4:00 cuenta para el día anterior')}</ul></article>
-      <article class="hoja"><h2>Para la meta del día</h2><ul class="lista" style="border:0">${filaParam('costos', 'Costos fijos del mes', dinero(P.costosFijos, 'usd', 0), 'Alquiler, nómina, servicios. Sin este número no hay meta del día.')}</ul></article></div></div>`;
+      <article class="hoja"><h2>Para la meta del día</h2><ul class="lista" style="border:0">${filaParam('costos', 'Costos fijos del mes', dinero(P.costosFijos, 'usd', 0), 'Alquiler, nómina, servicios. Sin este número no hay meta del día. Lo pone el dueño.')}</ul></article></div></div>`;
   }
   function cuentas() {
     return `${A.tabla({ cols: [{ t: 'Cuenta', cls: 'p' }, { t: 'Tipo', cls: 'x' }, { t: 'Titular o custodio', cls: 'x' }, { t: 'Moneda', cls: 'r' }, { t: 'Etiqueta', cls: 'e' }], filas: D.CUENTAS.map(c => ({ abrir: 'cuenta:' + c.id, celdas: [`<b>${esc(c.nombre)}</b><small>${esc(c.num)}</small>`, esc(c.tipo), esc(c.titular), { bs: 'Bs', usd: '$', usdt: 'USDT' }[c.mon], `<span class="acct" data-c="${c.id}">${c.id}</span>`] })) })}
@@ -162,17 +172,21 @@
   };
   FICHAS.param = clave => {
     const N = P.negocio; const s = P.sedes[0];
-    let etq, obj, k = 'valor', tipo = 'texto', nota = '', sensible = false, set;
+    let etq, obj, k = 'valor', tipo = 'texto', nota = '', sensible = false, set, soloDueno = false;
     const [g, i] = clave.split('-');
     const arr = { leg: P.legales, ali: P.alicuotas, met: P.metodos, tmov: P.tiposMov, reg: P.reglas, av: P.avisos }[g];
-    if (clave === 'costos') { etq = 'Costos fijos del mes'; obj = { valor: P.costosFijos }; tipo = 'dinero'; set = v => { P.costosFijos = v; }; nota = 'La meta del día se recalcula sola con este número.'; }
+    // los costos fijos los pone el dueño (decidido): nadie más los cambia, aunque edite parámetros
+    if (clave === 'costos') { etq = 'Costos fijos del mes'; obj = { valor: P.costosFijos }; tipo = 'dinero'; set = v => { P.costosFijos = v; }; nota = 'La meta del día se recalcula sola con este número.'; soloDueno = true; }
     else if (g === 'n') { const map = { nombre: 'nombre', razon: 'razon', rif: 'rif', espec: 'espec', zona: 'zona', moneda: 'monedaBase', carta: 'carta' }; etq = { nombre: 'Nombre', razon: 'Razón social', rif: 'RIF', espec: 'Contribuyente especial', zona: 'Zona horaria', moneda: 'Moneda base', carta: 'Precios de la carta en' }[i]; obj = N; k = map[i]; sensible = i === 'rif'; }
     else if (g === 's') { etq = i === 'corte' ? 'Hora de corte del día' : 'Sede'; obj = s; k = i === 'corte' ? 'corte' : 'nombre'; nota = i === 'corte' ? 'Cada registro guarda su día al nacer: cambiar la hora no reescribe la historia.' : ''; }
     else if (g === 't') { etq = { fuente: 'De dónde salen', respaldo: 'Si no llegan', usdt: 'USDT', finde: 'Fines de semana y feriados' }[i]; obj = P.tasas; k = i; }
     else if (g === 'cat') { etq = 'Categoría'; obj = { valor: P.categorias[i] }; set = v => { P.categorias[i] = v; }; }
     else if (arr) { etq = arr[i][0]; obj = { valor: arr[i][1] }; set = v => { arr[i][1] = v; }; if (g === 'leg') nota = 'Vigente ' + arr[i][2] + '. Al cambiarlo, se cierra esta vigencia y empieza una nueva hoy.'; }
+    const soloLee = soloDueno && !puede('parametros', 'aprobar');
     return { titulo: etq, sub: 'Parámetro', mod: 'parametros', obj, registro: 'Parámetro: ' + etq,
-      bloques: [{ filas: [{ l: 'Valor', v: tipo === 'dinero' ? dinero(obj[k], 'usd', 0) : esc(obj[k]), campo: { k, tipo, sensible } }, { l: 'Último cambio', v: '3 oct · Alejandro' }] }].concat(nota ? [{ html: `<p class="muted">${esc(nota)}</p>` }] : []),
+      bloques: [{ filas: [{ l: 'Valor', v: tipo === 'dinero' ? dinero(obj[k], 'usd', 0) : esc(obj[k]), campo: soloLee ? undefined : { k, tipo, sensible } }, { l: 'Último cambio', v: '3 oct · Alejandro' }] }]
+        .concat(soloLee ? [{ html: `<p class="nota gris">${ic('candado', 's')}<span><b>Solo lo cambia el dueño.</b> Los costos fijos los pone Alejandro: si cambiaron, avísale.</span></p>` }] : [])
+        .concat(nota ? [{ html: `<p class="muted">${esc(nota)}</p>` }] : []),
       alGuardar: cambios => { if (set) set(cambios[0].nuevo); } };
   };
 
@@ -200,7 +214,7 @@
     render: () => `<div class="pagina">${A.cab('¿Está todo funcionando?', 'Salud del sistema', 'Cada pieza se revisa sola. Si algo se cae, suena una alarma en el teléfono de Alejandro, no un correo que nadie lee.')}
       <div class="cifras">${D.SALUD.map(h => `<button class="cifra ${h.estado === 'ok' ? '' : 'aviso'}" data-abrir="salud:${h.id}"><span class="etq">${esc(h.nombre)}</span><b style="font-size:19px;display:flex;align-items:center;gap:6px;color:var(--${h.estado === 'ok' ? 'ok' : 'aviso'})">${ic(h.estado === 'ok' ? 'check' : 'alerta', 's')}${h.estado === 'ok' ? 'Bien' : 'Mirar'}</b><small>${esc(h.detalle)}</small></button>`).join('')}</div>
       <div class="rejilla"><div class="c6"><article class="hoja"><h2>Qué tan frescos están los datos</h2><dl class="kv">${D.FRESCURA.map(f => `<div><dt>${esc(f[0])}</dt><dd>${tag(f[1], f[2] === 'gris' ? '' : f[2])}</dd></div>`).join('')}</dl></article></div>
-      <div class="c6"><article class="hoja"><div class="hoja-cab"><h2>Recargas del saldo de IA</h2>${A.boton('salud', 'Anotar una recarga', 'data-acc="pronto"', { tono: 'ghost', icono: 'mas', chico: true, permiso: 'ver' })}</div><dl class="kv"><div><dt>20 sep</dt><dd>US$ 40</dd></div><div><dt>Gasto promedio</dt><dd>≈ US$ 0,90 por día</dd></div><div><dt>Alcanza hasta</dt><dd>≈ 31 de octubre</dd></div></dl></article></div></div></div>`,
+      <div class="c6"><article class="hoja"><div class="hoja-cab"><h2>Recargas del saldo de IA</h2>${A.boton('salud', 'Anotar una recarga', 'data-acc="pronto"', { tono: 'ghost', icono: 'mas', chico: true, permiso: 'ver' })}</div><dl class="kv"><div><dt>14 sep</dt><dd>US$ 30</dd></div><div><dt>Gasto promedio</dt><dd>≈ US$ 0,70 por día</dd></div><div><dt>Alcanza hasta</dt><dd>≈ 26 de octubre</dd></div></dl></article></div></div></div>`,
   };
   FICHAS.salud = id => {
     const h = D.SALUD.find(x => x.id === id);

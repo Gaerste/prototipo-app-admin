@@ -113,8 +113,10 @@
     if (acc === 'sueldos') return ['a', 'r', 'p'].includes(n);
     return false;
   }
+  // quién hace los cambios: no se nombra a quien está «por confirmar» (su acceso no se ha decidido) ni a quien se le quitó el acceso;
+  // sí a quien está invitado, porque su rol ya está decidido
   const quienEdita = mod => {
-    const nombres = D.USUARIOS.filter(u => u.estado !== 'invitada' && puede(mod, 'editar', u)).map(u => u.nombre);
+    const nombres = D.USUARIOS.filter(u => !['por_confirmar', 'sin_acceso'].includes(u.estado) && puede(mod, 'editar', u)).map(u => u.nombre);
     return nombres.length ? nombres.join(', ').replace(/, ([^,]*)$/, ' o $1') : 'Alejandro';
   };
 
@@ -182,7 +184,8 @@
   }
 
   /* ---------- la ficha de detalle ---------- */
-  // spec: { titulo, sub, tags:[[txt,tono]], mod, obj, registro, bloques:[...], acciones:[...], aviso }
+  // spec: { titulo, sub, tags:[[txt,tono]], mod, obj, registro, bloques:[...], acciones:[...], aviso, bloqueada, bloqueo }
+  // bloqueada: lo pagado, declarado o enviado no se edita · bloqueo: cómo se corrige (lo dice el botón Editar con candado)
   // bloque kv: { titulo, filas:[{ l, v, campo:{ k, tipo:'texto'|'dinero'|'numero'|'fecha'|'select'|'area', opciones, sensible, mon } }] }
   function abrir(tipo, id) {
     if (!FICHAS[tipo]) { aviso('Esta ficha todavía no está dibujada.', 'info'); return; }
@@ -226,8 +229,8 @@
       } else if (b.html) inner = b.html;
       return `<section class="bloque">${b.titulo ? `<h3>${esc(b.titulo)}${b.extra || ''}</h3>` : ''}${inner}</section>`;
     }).join('');
-    const SELLOS = { pagada: 'Pagado', confirmado: 'Confirmado', declarada: 'Declarada', aprobada: 'Aprobado', entregada: 'Entregado', repuesta: 'Repuesto', enterada: 'Pagado', conciliada: 'Conciliada', llego: 'Llegó', justificada: 'Justificada', descontada: 'Descontado', disfrutada: 'Disfrutada', resuelta: 'Resuelta', perdonado: 'Perdonado', firmado: 'Firmado' };
-    const ROJOS = { no_vino: 'No vino', injustificada: 'Injustificada', cancelada: 'Cancelada', rechazado: 'Rechazado' };
+    const SELLOS = { pagada: 'Pagado', confirmado: 'Confirmado', declarada: 'Declarada', aprobada: 'Aprobado', entregada: 'Entregado', repuesta: 'Repuesto', enterada: 'Pagado', conciliada: 'Conciliada', llego: 'Llegó', justificada: 'Justificada', descontada: 'Descontado', disfrutada: 'Disfrutada', resuelta: 'Resuelta', perdonado: 'Perdonado', firmado: 'Firmado', rendida: 'Rendida' };
+    const ROJOS = { no_vino: 'No vino', injustificada: 'Injustificada', cancelada: 'Cancelada', rechazado: 'Rechazado', rechazada: 'Rechazada' };
     const ob = spec.obj || {}; const est = ob.anulada ? 'anulada' : ob.estado;
     const selloTxt = ob.anulada ? 'Anulado' : (SELLOS[est] || ROJOS[est]);
     if (f.est0 === undefined) f.est0 = est;
@@ -243,7 +246,7 @@
       ? `<button class="btn sec" data-ficha="cancelar">Cancelar</button><button class="btn pri" data-ficha="guardar">${ic('check', 's')}Guardar cambios</button>`
       : (spec.anulable && puede(spec.mod, 'editar') ? `<button class="btn ghost izq" data-ficha="anular">${ic('anular', 's')}Anular</button>` : '') +
         acciones.map(a => `<button class="btn ${a.tono || 'sec'}" data-acc="${a.acc}" data-arg="${esc(a.arg ?? f.id)}">${a.icono ? ic(a.icono, 's') : ''}${esc(a.txt)}</button>`).join('') +
-        (editable ? (puedeEditar ? `<button class="btn pri" data-ficha="editar">${ic('lapiz', 's')}Editar</button>` : `<button class="btn bloq" data-ficha="sin-permiso" aria-disabled="true">${ic('candado', 's')}Editar</button>`) : '');
+        (editable ? (puedeEditar ? `<button class="btn ${spec.editarTono || 'pri'}" data-ficha="editar">${ic('lapiz', 's')}${esc(spec.editar || 'Editar')}</button>` : `<button class="btn bloq" data-ficha="${spec.bloqueada ? 'cerrada' : 'sin-permiso'}" aria-disabled="true">${ic('candado', 's')}${esc(spec.editar || 'Editar')}</button>`) : '');
     $('#ficha-raiz').innerHTML = `<div class="ficha-env"><button class="ficha-velo" data-ficha="cerrar" aria-label="Cerrar la ficha"></button>
       <aside class="ficha" role="dialog" aria-modal="true" aria-labelledby="ficha-t">
         <header class="ficha-cab"><div>${spec.sub ? `<span class="muted">${spec.sub}</span>` : ''}<h2 id="ficha-t">${esc(spec.titulo)}</h2>${tags.length || sello ? `<div class="tags">${sello}${tags.map(t => tag(t[0], t[1])).join('')}</div>` : ''}</div>
@@ -393,7 +396,7 @@
           <p class="muted" id="l-msg"></p>
           <button class="btn pri full" type="submit">Entrar</button>
         </form>
-        <div class="hoja" style="gap:10px"><p class="etq">Prototipo: elige quién entra</p><div class="quien">${D.USUARIOS.map(x => `<button data-login="${x.id}"><span class="avatar">${iniciales(x)}</span><span><b>${esc(nombreDe(x))}</b><small>${esc(D.ROLES[x.rol].nombre)}${x.estado === 'invitada' ? ' · invitación nueva' : x.estado === 'aprendiz' ? ' · aprendiz' : x.estado === 'por_confirmar' ? ' · por confirmar' : ''}</small></span></button>`).join('')}</div></div>
+        <div class="hoja" style="gap:10px"><p class="etq">Prototipo: elige quién entra</p><div class="quien">${D.USUARIOS.map(x => `<button data-login="${x.id}"><span class="avatar">${iniciales(x)}</span><span><b>${esc(nombreDe(x))}</b><small>${esc(D.ROLES[x.rol].nombre)}${x.estado === 'invitada' ? ' · invitación nueva' : x.estado === 'aprendiz' ? ' · aprendiz' : x.estado === 'por_confirmar' && !/por confirmar/.test(D.ROLES[x.rol].nombre) ? ' · por confirmar' : ''}</small></span></button>`).join('')}</div></div>
       </div>`;
     } else if (L.paso === 'codigo') {
       paso = `<div class="login-paso">
@@ -507,6 +510,7 @@
       else if (a === 'cancelar') { S.ficha.editando = false; pintarFicha(); }
       else if (a === 'guardar') guardarFicha();
       else if (a === 'sin-permiso') aviso('Solo lectura: pídeselo a ' + quienEdita(S.ficha.spec.mod) + '.', 'info');
+      else if (a === 'cerrada') aviso(S.ficha.spec.bloqueo || 'Está cerrado: ya no se edita. Se corrige con un movimiento al revés.', 'info');
       else if (a === 'anular') {
         const spec = S.ficha.spec;
         pedirMotivo({ titulo: 'Anular «' + spec.titulo + '»', texto: 'No se borra: queda tachado, con el motivo, quién y cuándo.', boton: 'Anular', tono: 'peligro', codigo: true }).then(m => {

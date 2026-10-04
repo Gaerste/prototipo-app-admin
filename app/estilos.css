@@ -395,6 +395,9 @@ button.fila:hover { background: var(--hoja-2); }
 .barras { display: flex; flex-direction: column; gap: 10px; }
 .barra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; font-size: 13.5px; }
 .barra b { font-variant-numeric: tabular-nums; }
+/* una barra que se abre (termómetro de la comida): se ve igual que las demás */
+button.barra { width: 100%; border: 0; background: none; padding: 0; margin: 0; text-align: left; color: inherit; font: inherit; font-size: 13.5px; cursor: pointer; border-radius: 4px; }
+button.barra:hover > span:first-child, button.barra:focus-visible > span:first-child { text-decoration: underline; }
 .pista { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--hoja-2); border: 1px solid var(--raya); overflow: hidden; }
 .pista > span { display: block; height: 100%; border-radius: 4px; background: var(--tinta-2); }
 .pista > span.ok { background: var(--ok); }
@@ -539,7 +542,7 @@ button.fila:hover { background: var(--hoja-2); }
 
 /* ---------- pagos de los lunes ---------- */
 .pagos-rej { display: grid; gap: 18px; }
-.libro { background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; }
+.libro-pagos { background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; }  /* no usar «libro»: es el libro de reservas */
 .lcab { display: none; }
 .lfila { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "prov monto" "vence estado" "cuenta cuenta"; gap: 6px 10px; align-items: center; padding: 13px 14px; }
 .lfila + .lfila { border-top: 1px solid var(--raya-2); }
@@ -575,6 +578,9 @@ button.fila:hover { background: var(--hoja-2); }
 @container app (min-width: 960px) {
   .pagos-rej { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
   .lado { position: sticky; top: 0; }
+}
+/* las columnas de la lista solo cuando le caben al lado del panel (en el iPad la lista va en fichas, como en el teléfono) */
+@container app (min-width: 1320px) {
   .lcab, .lfila { grid-template-columns: minmax(0, 1fr) 96px 112px 140px 122px; grid-template-areas: none; gap: 10px; padding: 10px 16px; }
   .lcab { display: grid; font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-3); background: var(--hoja-2); border-bottom: 1px solid var(--raya); border-radius: 8px 14px 0 0; }
   .lcab .r { text-align: right; }
@@ -590,9 +596,10 @@ button.fila:hover { background: var(--hoja-2); }
 .pdf-t { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .pdf-t th { text-align: left; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #5A6372; border-bottom: 1px solid #C9CFC6; padding: 6px 4px; }
 .pdf-t td { border-bottom: 1px solid #E3E7E1; padding: 6px 4px; }
-.pdf-t .r { text-align: right; font-variant-numeric: tabular-nums; }
-.pdf .acct { --res-bvca: #FFE15A; --res-bvce: #93E6A0; --res-bvcj: #A3CDFF; --res-bnc: #D6C4FF; color: #18202E; }
-.pdf-cajas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pdf-t .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* el PDF es papel blanco también en modo oscuro: las etiquetas usan los colores claros (BOV, BIN, SOCIO y APORTE incluidos) */
+.pdf .acct { --res-bvca: #FFE15A; --res-bvce: #93E6A0; --res-bvcj: #A3CDFF; --res-bnc: #D6C4FF; --res-efe: #F2C9A0; --hoja-3: #E6EBE3; color: #18202E; }
+.pdf-cajas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .pdf-cajas div { border: 1px solid #C9CFC6; border-radius: 6px; padding: 8px 10px; font-size: 11.5px; color: #5A6372; }
 .pdf-cajas b { display: block; font-size: 15px; color: #18202E; font-variant-numeric: tabular-nums; }
 .pdf-nota { font-size: 12.5px; line-height: 1.5; color: #333B48; }

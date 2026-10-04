@@ -6,24 +6,26 @@
 
   /* ---------- personal (14 de 49 en nómina) ----------
      sueldo = base QUINCENAL en $ (diario = sueldo ÷ 15) · por_dia = tarifa diaria · nac = [día, mes 0-11, año]
-     pct = % del 10 % de servicio · turno: T-1 mañana, T-2 tarde, T-3 noche */
+     pct = % del 10 % de servicio · turno: T-1 mañana, T-2 tarde, T-3 noche
+     cuentaNueva = la cuenta cambió hace poco: está por verificar y en Pagar la nómina no se le paga ahí hasta confirmarla con la persona */
   const EMPLEADOS = [
-    { id: 'e1', nombre: 'María Fernández', ci: 'V-•••• 3381', cargo: 'Jefa de cocina', area: 'Cocina', ingreso: '1 mar 2022', anios: 4, formal: true, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 420, pct: 3.0, nac: [14, 1, 1986], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta mar 2027', certOk: true, cuenta: 'Banesco •••• 4410', titular: 'Ella misma', docs: 'Completo', vacaciones: '2 períodos sin disfrutar', emergencia: 'Hermana · 0412-•••-8812' },
-    { id: 'e2', nombre: 'José Gregorio Rivas', ci: 'V-•••• 9054', cargo: 'Parrillero', area: 'Cocina', ingreso: '7 ago 2023', anios: 3, formal: true, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 360, pct: 2.5, nac: [9, 9, 1991], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Venció el 20 sep 2026', certOk: false, cuenta: 'Mercantil •••• 1187', titular: 'Él mismo', docs: 'Falta certificado de salud', vacaciones: '17 días por programar', emergencia: 'Esposa · 0424-•••-3301' },
-    { id: 'e3', nombre: 'Daniela Salas', ci: 'V-•••• 6620', cargo: 'Cajera', area: 'Caja', ingreso: '8 ene 2024', anios: 2, formal: false, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 300, pct: 1.5, nac: [22, 9, 1999], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta jun 2027', certOk: true, cuenta: 'Venezuela •••• 7731', titular: 'Su mamá (V-•••• 1029)', docs: 'Completo', vacaciones: '16 días por programar', emergencia: 'Mamá · 0414-•••-5520' },
-    { id: 'e4', nombre: 'Kevin Torres', ci: 'V-•••• 2287', cargo: 'Mesonero', area: 'Servicio', ingreso: '3 jun 2024', anios: 2, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 260, pct: 2.0, nac: [5, 9, 2002], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta ene 2027', certOk: true, cuenta: 'Banesco •••• 0921', titular: 'Él mismo', docs: 'Falta contrato firmado', vacaciones: 'Al día', emergencia: 'Papá · 0416-•••-7710' },
-    { id: 'e5', nombre: 'Yohana Blanco', ci: 'V-•••• 4471', cargo: 'Ayudante de cocina', area: 'Cocina', ingreso: '10 feb 2025', anios: 1, formal: false, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 270, pct: 1.0, nac: [30, 10, 1997], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta feb 2027', certOk: true, cuenta: 'Provincial •••• 5518', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Pareja · 0412-•••-1180' },
-    { id: 'e6', nombre: 'Luis Ángel Mora', ci: 'V-•••• 8812', cargo: 'Delivery', area: 'Delivery', ingreso: '21 abr 2025', anios: 1, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 250, pct: 1.0, nac: [17, 9, 2000], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta abr 2027', certOk: true, cuenta: 'Pago móvil 0414-•••-3390', titular: 'Él mismo', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Mamá · 0424-•••-6602' },
-    { id: 'e7', nombre: 'Patricia Reyes', ci: 'V-•••• 1150', cargo: 'Supervisora de salón', area: 'Servicio', ingreso: '13 sep 2021', anios: 5, formal: true, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 450, pct: 3.0, nac: [2, 10, 1984], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta dic 2026', certOk: true, cuenta: 'Banesco •••• 7702', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Programadas del 19 oct al 12 nov', emergencia: 'Esposo · 0414-•••-2019', usuario: 'patricia' },
-    { id: 'e8', nombre: 'Andrés Colmenares', ci: 'V-•••• 3019', cargo: 'Barra', area: 'Servicio', ingreso: '4 nov 2024', anios: 1, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 280, pct: 1.5, nac: [28, 9, 1998], contrato: 'Determinado', contratoVence: [30, 10], prueba: null, cert: 'Vigente hasta nov 2026', certOk: true, cuenta: 'Mercantil •••• 6650', titular: 'Él mismo', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Hermano · 0412-•••-4471' },
-    { id: 'e9', nombre: 'Ramón Quintero', ci: '', cargo: 'Vigilante', area: 'Seguridad', ingreso: '14 jul 2025', anios: 1, formal: false, estado: 'activo', turno: 'T-3', tipoSal: 'por_dia', diaria: 20, sueldo: 300, pct: 0.5, nac: null, contrato: 'Determinado (2.ª prórroga)', contratoVence: [31, 9], prueba: null, cert: 'No aplica (no manipula alimentos)', certOk: true, cuenta: 'Pago móvil 0416-•••-9021', titular: 'Su hijo (V-•••• 7781)', docs: 'Falta la cédula y la fecha de nacimiento', vacaciones: 'Al día', emergencia: '—' },
+    { id: 'e1', nombre: 'María Fernández', ci: 'V-•••• 3381', cargo: 'Jefa de cocina', area: 'Cocina', ingreso: '1 mar 2022', anios: 4, formal: true, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 420, pct: 1.2, nac: [14, 1, 1986], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta mar 2027', certOk: true, cuenta: 'Banesco •••• 4410', titular: 'Ella misma', docs: 'Completo', vacaciones: '2 períodos sin disfrutar', emergencia: 'Hermana · 0412-•••-8812' },
+    { id: 'e2', nombre: 'José Gregorio Rivas', ci: 'V-•••• 9054', cargo: 'Parrillero', area: 'Cocina', ingreso: '7 ago 2023', anios: 3, formal: true, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 360, pct: 1.0, nac: [9, 9, 1991], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Venció el 20 sep 2026', certOk: false, cuenta: 'Mercantil •••• 1187', titular: 'Él mismo', docs: 'Falta certificado de salud', vacaciones: '17 días por programar', emergencia: 'Esposa · 0424-•••-3301' },
+    { id: 'e3', nombre: 'Daniela Salas', ci: 'V-•••• 6620', cargo: 'Cajera', area: 'Caja', ingreso: '8 ene 2024', anios: 2, formal: false, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 300, pct: 0.6, nac: [22, 9, 1999], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta jun 2027', certOk: true, cuenta: 'Venezuela •••• 7731', titular: 'Su mamá (V-•••• 1029)', docs: 'Completo', vacaciones: '16 días por programar', emergencia: 'Mamá · 0414-•••-5520' },
+    { id: 'e4', nombre: 'Kevin Torres', ci: 'V-•••• 2287', cargo: 'Mesonero', area: 'Servicio', ingreso: '3 jun 2024', anios: 2, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 260, pct: 0.8, nac: [5, 9, 2002], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta ene 2027', certOk: true, cuenta: 'Banesco •••• 0921', titular: 'Él mismo', docs: 'Falta contrato firmado', vacaciones: 'Al día', emergencia: 'Papá · 0416-•••-7710' },
+    { id: 'e5', nombre: 'Yohana Blanco', ci: 'V-•••• 4471', cargo: 'Ayudante de cocina', area: 'Cocina', ingreso: '10 feb 2025', anios: 1, formal: false, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 270, pct: 0.4, nac: [30, 10, 1997], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta feb 2027', certOk: true, cuenta: 'Banesco •••• 8127', cuentaVieja: 'Provincial •••• 5518', cuentaNueva: 'Andreina la cambió el jueves 1 con su código', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Pareja · 0412-•••-1180' },
+    { id: 'e6', nombre: 'Luis Ángel Mora', ci: 'V-•••• 8812', cargo: 'Delivery', area: 'Delivery', ingreso: '21 abr 2025', anios: 1, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 250, pct: 0.4, nac: [17, 9, 2000], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta abr 2027', certOk: true, cuenta: 'Pago móvil 0414-•••-3390', titular: 'Él mismo', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Mamá · 0424-•••-6602' },
+    { id: 'e7', nombre: 'Patricia Reyes', ci: 'V-•••• 1150', cargo: 'Supervisora de salón', area: 'Servicio', ingreso: '13 sep 2021', anios: 5, formal: true, estado: 'activo', turno: 'T-1', tipoSal: 'quincenal', sueldo: 450, pct: 1.2, nac: [2, 10, 1984], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta dic 2026', certOk: true, cuenta: 'Banesco •••• 7702', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Programadas del 19 oct al 12 nov', emergencia: 'Esposo · 0414-•••-2019', usuario: 'patricia' },
+    { id: 'e8', nombre: 'Andrés Colmenares', ci: 'V-•••• 3019', cargo: 'Barra', area: 'Servicio', ingreso: '4 nov 2024', anios: 1, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 280, pct: 0.6, nac: [28, 9, 1998], contrato: 'Determinado', contratoVence: [30, 10], prueba: null, cert: 'Vigente hasta nov 2026', certOk: true, cuenta: 'Mercantil •••• 6650', titular: 'Él mismo', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Hermano · 0412-•••-4471' },
+    { id: 'e9', nombre: 'Ramón Quintero', ci: '', cargo: 'Vigilante', area: 'Seguridad', ingreso: '14 jul 2025', anios: 1, formal: false, estado: 'activo', turno: 'T-3', tipoSal: 'por_dia', diaria: 20, sueldo: 300, pct: 0.2, nac: null, contrato: 'Determinado (2.ª prórroga)', contratoVence: [31, 9], prueba: null, cert: 'No aplica (no manipula alimentos)', certOk: true, cuenta: 'Pago móvil 0416-•••-9021', titular: 'Su hijo (V-•••• 7781)', docs: 'Falta la cédula y la fecha de nacimiento', vacaciones: 'Al día', emergencia: '—' },
     { id: 'e10', nombre: 'Rosa Medina', ci: 'V-•••• 5590', cargo: 'Mesonera', area: 'Servicio', ingreso: '14 sep 2026', anios: 0, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 240, pct: 0, nac: [11, 11, 2003], contrato: 'Determinado', contratoVence: [13, 11], prueba: [14, 9], cert: 'En trámite (pidió cita)', certOk: false, cuenta: 'Banesco •••• 3398', titular: 'Ella misma', docs: 'Falta certificado de salud', vacaciones: 'Todavía no causa', emergencia: 'Mamá · 0424-•••-1137' },
-    { id: 'e11', nombre: 'Jhonny Pérez', ci: 'V-•••• 7046', cargo: 'Asador', area: 'Cocina', ingreso: '15 may 2023', anios: 3, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'por_dia', diaria: 26, sueldo: 390, pct: 2.0, nac: [3, 0, 1989], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta may 2027', certOk: true, cuenta: 'Venezuela •••• 4402', titular: 'Él mismo', docs: 'Completo', vacaciones: '17 días por programar', emergencia: 'Esposa · 0416-•••-8830' },
-    { id: 'e12', nombre: 'Mariela Castillo', ci: 'V-•••• 2264', cargo: 'Cajera', area: 'Caja', ingreso: '17 oct 2022', anios: 3, formal: true, estado: 'reposo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 300, pct: 1.5, nac: [19, 9, 1995], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta oct 2026', certOk: true, cuenta: 'Bicentenario •••• 1009', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Mamá · 0412-•••-9930' },
-    { id: 'e13', nombre: 'Wilmer Ortega', ci: 'V-•••• 6608', cargo: 'Mesonero', area: 'Servicio', ingreso: '6 feb 2023', anios: 3, formal: false, estado: 'vacaciones', turno: 'T-1', tipoSal: 'quincenal', sueldo: 260, pct: 2.0, nac: [8, 10, 1996], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta feb 2027', certOk: true, cuenta: 'Banesco •••• 2290', titular: 'Él mismo', docs: 'Completo', vacaciones: 'Disfrutando hasta el 19 oct', emergencia: 'Mamá · 0414-•••-6031' },
-    { id: 'e14', nombre: 'Gabriela Núñez', ci: 'V-•••• 9917', cargo: 'Mesonera', area: 'Servicio', ingreso: '11 mar 2024', anios: 2, formal: false, estado: 'egresado', egreso: 'Mié 30 sep 2026', motivoEgreso: 'Renuncia', turno: 'T-2', tipoSal: 'quincenal', sueldo: 250, pct: 1.5, nac: [6, 5, 2001], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: '—', certOk: true, cuenta: 'Provincial •••• 7703', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Se pagan en la liquidación', emergencia: '—' },
+    { id: 'e11', nombre: 'Jhonny Pérez', ci: 'V-•••• 7046', cargo: 'Asador', area: 'Cocina', ingreso: '15 may 2023', anios: 3, formal: false, estado: 'activo', turno: 'T-2', tipoSal: 'por_dia', diaria: 26, sueldo: 390, pct: 0.8, nac: [3, 0, 1989], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta may 2027', certOk: true, cuenta: 'Venezuela •••• 4402', titular: 'Él mismo', docs: 'Completo', vacaciones: '17 días por programar', emergencia: 'Esposa · 0416-•••-8830' },
+    { id: 'e12', nombre: 'Mariela Castillo', ci: 'V-•••• 2264', cargo: 'Cajera', area: 'Caja', ingreso: '17 oct 2022', anios: 3, formal: true, estado: 'reposo', turno: 'T-2', tipoSal: 'quincenal', sueldo: 300, pct: 0.6, nac: [19, 9, 1995], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta oct 2026', certOk: true, cuenta: 'Bicentenario •••• 1009', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Al día', emergencia: 'Mamá · 0412-•••-9930' },
+    { id: 'e13', nombre: 'Wilmer Ortega', ci: 'V-•••• 6608', cargo: 'Mesonero', area: 'Servicio', ingreso: '6 feb 2023', anios: 3, formal: false, estado: 'vacaciones', turno: 'T-1', tipoSal: 'quincenal', sueldo: 260, pct: 0.8, nac: [8, 10, 1996], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: 'Vigente hasta feb 2027', certOk: true, cuenta: 'Banesco •••• 2290', titular: 'Él mismo', docs: 'Completo', vacaciones: 'Disfrutando hasta el 19 oct', emergencia: 'Mamá · 0414-•••-6031' },
+    { id: 'e14', nombre: 'Gabriela Núñez', ci: 'V-•••• 9917', cargo: 'Mesonera', area: 'Servicio', ingreso: '11 mar 2024', anios: 2, formal: false, estado: 'egresado', egreso: 'Mié 30 sep 2026', motivoEgreso: 'Renuncia', turno: 'T-2', tipoSal: 'quincenal', sueldo: 250, pct: 0.6, nac: [6, 5, 2001], contrato: 'Indeterminado', contratoVence: null, prueba: null, cert: '—', certOk: true, cuenta: 'Provincial •••• 7703', titular: 'Ella misma', docs: 'Completo', vacaciones: 'Se pagan en la liquidación', emergencia: '—' },
   ];
-  const TURNOS = { 'T-1': ['Mañana', '7:00 a 15:00'], 'T-2': ['Tarde', '15:00 a 23:00'], 'T-3': ['Noche', '23:00 a 7:00 (nocturno: +30 %)'] };
+  // [nombre, horario]: el horario solo lleva las horas · el recargo de noche sale en la ficha de cada turno (Nómina › Reglas)
+  const TURNOS = { 'T-1': ['Mañana', '7:00 a 15:00'], 'T-2': ['Tarde', '15:00 a 23:00'], 'T-3': ['Noche', '23:00 a 7:00'] };
 
   /* ---------- asistencia ---------- */
   // semana del lun 5 al dom 11 oct · 1 2 3 = turno · D descanso · V vacaciones · R reposo
@@ -39,30 +41,33 @@
     // lo que marcó el reloj hoy hasta las 14:05 (ejemplo)
     hoy: { e3: ['6:58', ''], e5: ['7:12', 'llegó 12 min tarde'], e7: ['6:50', ''], e9: ['', 'salió 7:04 del turno de anoche'] },
   };
-  // horas de la 2.ª quincena de septiembre (16 al 30) · ejemplo de cómo se verá con el Excel del reloj
+  // horas de la 2.ª quincena de septiembre (16 al 30) · ejemplo de cómo se verá con el Excel del reloj · entran en la nómina del 15
+  // noct = horas entre 7 p. m. y 5 a. m.: la tarde (15 a 23) tiene 4 por día trabajado; la noche es jornada nocturna completa, todas
+  // dom = domingos o feriados trabajados, en días (en la quincena: domingos 20 y 27; el vigilante descansa sábado y domingo)
   const HORAS = {
     periodo: '16 al 30 de septiembre',
     filas: {
-      e1: { prog: 96, trab: 98, extra: 2, noct: 0, tarde: 0, redobles: 0, faltas: 0 },
-      e2: { prog: 96, trab: 104, extra: 8, noct: 0, tarde: 15, redobles: 1, faltas: 0 },
-      e3: { prog: 96, trab: 95.5, extra: 0, noct: 0, tarde: 25, redobles: 0, faltas: 0 },
-      e4: { prog: 88, trab: 92, extra: 0, noct: 0, tarde: 40, redobles: 2, faltas: 0 },
-      e5: { prog: 96, trab: 96, extra: 0, noct: 0, tarde: 12, redobles: 0, faltas: 0 },
-      e6: { prog: 88, trab: 80, extra: 0, noct: 0, tarde: 55, redobles: 0, faltas: 1 },
-      e7: { prog: 96, trab: 97, extra: 1, noct: 0, tarde: 0, redobles: 0, faltas: 0 },
-      e8: { prog: 88, trab: 94, extra: 0, noct: 0, tarde: 10, redobles: 1, faltas: 0 },
-      e9: { prog: 96, trab: 96, extra: 0, noct: 96, tarde: 0, redobles: 0, faltas: 0 },
-      e10: { prog: 72, trab: 70, extra: 0, noct: 0, tarde: 30, redobles: 0, faltas: 0 },
-      e11: { prog: 96, trab: 81, extra: 0, noct: 0, tarde: 20, redobles: 0, faltas: 0 },
-      e12: { prog: 96, trab: 88, extra: 0, noct: 0, tarde: 0, redobles: 0, faltas: 0 },
-      e13: { prog: 88, trab: 88, extra: 0, noct: 0, tarde: 5, redobles: 1, faltas: 0 },
+      e1: { prog: 96, trab: 98, extra: 2, noct: 0, dom: 2, tarde: 0, redobles: 0, faltas: 0 },
+      e2: { prog: 96, trab: 104, extra: 8, noct: 48, dom: 2, tarde: 15, redobles: 1, faltas: 0 },
+      e3: { prog: 96, trab: 95.5, extra: 0, noct: 0, dom: 2, tarde: 25, redobles: 0, faltas: 0 },
+      e4: { prog: 88, trab: 92, extra: 0, noct: 44, dom: 2, tarde: 40, redobles: 2, faltas: 0 },
+      e5: { prog: 96, trab: 96, extra: 0, noct: 0, dom: 2, tarde: 12, redobles: 0, faltas: 0 },
+      e6: { prog: 88, trab: 80, extra: 0, noct: 40, dom: 2, tarde: 55, redobles: 0, faltas: 1 },
+      e7: { prog: 96, trab: 97, extra: 1, noct: 0, dom: 2, tarde: 0, redobles: 0, faltas: 0 },
+      e8: { prog: 88, trab: 94, extra: 0, noct: 44, dom: 2, tarde: 10, redobles: 1, faltas: 0 },
+      e9: { prog: 96, trab: 96, extra: 0, noct: 96, dom: 0, tarde: 0, redobles: 0, faltas: 0 },
+      e10: { prog: 72, trab: 70, extra: 0, noct: 36, dom: 2, tarde: 30, redobles: 0, faltas: 0 },
+      e11: { prog: 96, trab: 81, extra: 0, noct: 40, dom: 1, tarde: 20, redobles: 0, faltas: 0 },
+      e12: { prog: 96, trab: 88, extra: 0, noct: 44, dom: 2, tarde: 0, redobles: 0, faltas: 0 },
+      e13: { prog: 88, trab: 88, extra: 0, noct: 0, dom: 2, tarde: 5, redobles: 1, faltas: 0 },
     },
   };
+  // las faltas las clasifica Andreina (RRHH) con su soporte (29-ago)
   const FALTAS = [
     { id: 'fa1', emp: 'e4', fecha: 'Sáb 3 oct', turno: 'T-2', estado: 'por_justificar', nota: 'Avisó por WhatsApp que amaneció con fiebre. Falta el justificativo médico.', mes: 0 },
-    { id: 'fa2', emp: 'e6', fecha: 'Jue 1 oct', turno: 'T-2', estado: 'injustificada', nota: 'No avisó. Es la 2.ª en los últimos 30 días (la otra fue el sáb 26 sep).', mes: 2, clasifico: 'Jose' },
-    { id: 'fa3', emp: 'e8', fecha: 'Mar 29 sep', turno: 'T-2', estado: 'justificada', nota: 'Justificativo médico de 1 día (gastroenteritis).', soporte: 'Justificativo médico 29 sep.jpg', mes: 0, clasifico: 'Jose' },
-    { id: 'fa4', emp: 'e3', fecha: 'Vie 25 sep', turno: 'T-1', estado: 'justificada', nota: 'Permiso para una cita en el SAIME. Trajo la constancia.', soporte: 'Constancia SAIME 25 sep.pdf', mes: 0, clasifico: 'Jose' },
+    { id: 'fa2', emp: 'e6', fecha: 'Jue 1 oct', turno: 'T-2', estado: 'injustificada', nota: 'No avisó. Es la 2.ª en los últimos 30 días (la otra fue el sáb 26 sep).', mes: 2, clasifico: 'Andreina' },
+    { id: 'fa3', emp: 'e8', fecha: 'Mar 29 sep', turno: 'T-2', estado: 'justificada', nota: 'Justificativo médico de 1 día (gastroenteritis).', soporte: 'Justificativo médico 29 sep.jpg', mes: 0, clasifico: 'Andreina' },
+    { id: 'fa4', emp: 'e3', fecha: 'Vie 25 sep', turno: 'T-1', estado: 'justificada', nota: 'Permiso para una cita en el SAIME. Trajo la constancia.', soporte: 'Constancia SAIME 25 sep.pdf', mes: 0, clasifico: 'Andreina' },
   ];
   const REDOBLES = [
     { id: 'rd1', emp: 'e4', fecha: 'Vie 2 oct', tipo: 'redoble', veces: 1, detalle: 'Cubrió el turno de la mañana de Wilmer (vacaciones) además del suyo', fuente: 'Lo anotó la supervisora', revisado: false },
@@ -105,10 +110,12 @@
     { id: 'pr6', emp: 'e1', monto: 250, cuotas: 5, cuota: 50, pagadas: 1, corridas: 0, inicio: '30 sep', fecha: 'Vie 25 sep', motivo: 'Reparación de la nevera de su casa', desde: 'BVCE', aprobo: 'Alejandro', registro: 'Jose', firmada: true, estado: 'activo' },
     { id: 'pr7', emp: 'e11', monto: 120, cuotas: 4, cuota: 30, pagadas: 1, corridas: 1, corridaEn: ['30 sep'], inicio: '15 sep', fecha: 'Jue 10 sep', motivo: 'Lentes', desde: 'Bóveda', aprobo: 'Alejandro', registro: 'Jose', firmada: false, estado: 'activo', nota: 'La cuota del 30 sep se corrió al final: faltó 3 días y el pago no alcanzaba para descontarla sin pasar el tope.' },
   ];
+  // registro = quien lo anotó · quien lo anota no lo aprueba: hasta $ 60 lo aprueba Jose si lo anotó otra persona; si no, Alejandro
+  // los de esta semana salieron por pago móvil desde BVCA: caja chica no los tiene
   const ADELANTOS = [
-    { id: 'ad1', emp: 'e8', monto: 60, fecha: 'Jue 1 oct', descuenta: '15 oct', motivo: 'Medicinas', aprobo: 'Jose', desde: 'Caja chica', estado: 'por_descontar' },
-    { id: 'ad2', emp: 'e6', monto: 40, fecha: 'Sáb 3 oct', descuenta: '15 oct', motivo: 'Repuesto de la moto', aprobo: 'Jose', desde: 'Caja chica', estado: 'por_descontar' },
-    { id: 'ad3', emp: 'e3', monto: 50, fecha: 'Mar 22 sep', descuenta: '30 sep', motivo: 'Pasaje para un viaje familiar', aprobo: 'Jose', desde: 'Caja chica', estado: 'descontada' },
+    { id: 'ad1', emp: 'e8', monto: 60, fecha: 'Jue 1 oct', descuenta: '15 oct', motivo: 'Medicinas', registro: 'Andreina', aprobo: 'Jose', desde: 'BVCA', estado: 'por_descontar' },
+    { id: 'ad2', emp: 'e6', monto: 40, fecha: 'Sáb 3 oct', descuenta: '15 oct', motivo: 'Repuesto de la moto', registro: 'Jose', aprobo: 'Alejandro', desde: 'BVCA', estado: 'por_descontar' },
+    { id: 'ad3', emp: 'e3', monto: 50, fecha: 'Mar 22 sep', descuenta: '30 sep', motivo: 'Pasaje para un viaje familiar', registro: 'Andreina', aprobo: 'Jose', desde: 'Caja chica', estado: 'descontada' },
   ];
   // consumos del personal: período 28 sep → 27 oct, se descuentan en la 2.ª quincena (31 oct)
   const CONSUMOEMP = [
@@ -121,18 +128,34 @@
   ];
 
   /* ---------- nómina: 10 %, propinas, recibos, prestaciones, liquidaciones ---------- */
+  // rep = el % de la comisión que se repartió entre el personal (el resto se lo queda el negocio, regla del 30-ago): la suma del pct de las 49 personas
+  // pctFormal = la parte de las 10 de la nómina formal: las 4 que se muestran (4,0 %) y las otras 6 (2,9 %) · la corrida del 10 % la guarda como formalEur
   const BOLSA = {
-    anterior: { periodo: '28 ago al 27 sep', comision: 9120, tasaEur: 701.30, pagada: 'con la 2.ª quincena de septiembre', cargo: 'Jose' },
+    anterior: { periodo: '28 ago al 27 sep', comision: 9120, rep: 23.4, pctFormal: 6.9, tasaEur: 701.30, pagada: 'con la 2.ª quincena de septiembre', cargo: 'Jose' },
     actual: { periodo: '28 sep al 27 oct', comision: null, carga: 'Se carga el miércoles 28 de octubre' },
   };
+  // la corrida del 10 % de septiembre es lo repartido de esa bolsa · cada corrida guarda su equivalente en dólares a la tasa de su día
+  const r2 = n => Math.round(n * 100) / 100;
+  DB.NOMINA.corridas.forEach(c => {
+    if (c.id === 'n1d') c.total = r2(BOLSA.anterior.comision * BOLSA.anterior.rep / 100);
+    c.usd = c.mon === 'eur' ? r2(c.total * c.tasaEur / c.tasa) : c.total;
+  });
+  // la regla del reparto no está dictada · estados: por_repartir → revisada (la reparten Jose o Andreina) → pagada (visto final de Alejandro)
   const PROPINAS = [
-    { id: 'pp1', semana: '28 sep al 4 oct', pote: 412, regla: 'Partes iguales entre los que trabajaron la semana (servicio y cocina)', personas: 31, estado: 'por_repartir' },
-    { id: 'pp2', semana: '21 al 27 sep', pote: 386, regla: 'Partes iguales entre los que trabajaron la semana (servicio y cocina)', personas: 32, estado: 'pagada' },
+    { id: 'pp1', semana: '28 sep al 4 oct', pote: 412, regla: 'Por confirmar: hoy se anotan por mesonero en el cierre de caja', personas: 31, estado: 'por_repartir' },
+    { id: 'pp2', semana: '21 al 27 sep', pote: 386, regla: 'Por confirmar: hoy se anotan por mesonero en el cierre de caja', personas: 32, estado: 'pagada', reparte: 'Jose', visto: 'Alejandro' },
   ];
+  // un recibo por persona en cada corrida (29-ago): la formal, la interna, el 10 % y el premio llevan los suyos
   const RECIBOS = [
-    { corrida: 'n1', fecha: '30 sep', firmados: 41, total: 49 },
-    { corrida: 'n2', fecha: '15 sep', firmados: 48, total: 48 },
-    { corrida: 'n3', fecha: '31 ago', firmados: 49, total: 49 },
+    { corrida: 'n1f', fecha: '30 sep', firmados: 10, total: 10 },
+    { corrida: 'n1i', fecha: '30 sep', firmados: 35, total: 39 },
+    { corrida: 'n1d', fecha: '30 sep', firmados: 45, total: 49 },
+    { corrida: 'n1p', fecha: '30 sep', firmados: 1, total: 1 },
+    { corrida: 'n2f', fecha: '15 sep', firmados: 10, total: 10 },
+    { corrida: 'n2i', fecha: '15 sep', firmados: 38, total: 38 },
+    { corrida: 'n3f', fecha: '31 ago', firmados: 10, total: 10 },
+    { corrida: 'n3i', fecha: '31 ago', firmados: 39, total: 39 },
+    { corrida: 'n3d', fecha: '31 ago', firmados: 49, total: 49 },
   ];
   // base mensual de prestaciones de los internos = mínimo + cestaticket + margen (dictado 29-ago; el margen está por confirmar)
   const PRESTA = {
@@ -151,6 +174,8 @@
       ] },
   ];
   const DICIEMBRE = { liquidacionAnual: 6580, utilidades: 3900, intereses: 260, apartado: 7200, mensual: 1180 };
+  // cambios a las reglas de la nómina (conceptos, turnos y feriados) que propuso RRHH y esperan a Alejandro, por ficha: se llenan desde la app
+  const PROP_REGLAS = {};
 
   /* ---------- disciplina y protección ---------- */
   const FUEROS = [
@@ -210,5 +235,5 @@
   ];
   const GRUPO_MESONEROS = { nombre: 'Mesoneros del restaurante', estado: 'por crear', miembros: 'Supervisora, mesoneros, barra y caja' };
 
-  Object.assign(DB, { MESES, EMPLEADOS, TURNOS, HORARIOS, HORAS, FALTAS, REDOBLES, INCIDENCIAS, VACACIONES, REPOSOS, PERMISOS_EMP, QUINCENAS, PRESTAMOS, ADELANTOS, CONSUMOEMP, BOLSA, PROPINAS, RECIBOS, PRESTA, LIQUIDACIONES, DICIEMBRE, FUEROS, AMONESTACIONES, ACUERDOS, CONSUMO_SOCIOS, RESERVAS, EVENTOS_AG, GRUPO_MESONEROS });
+  Object.assign(DB, { MESES, EMPLEADOS, TURNOS, HORARIOS, HORAS, FALTAS, REDOBLES, INCIDENCIAS, VACACIONES, REPOSOS, PERMISOS_EMP, QUINCENAS, PRESTAMOS, ADELANTOS, CONSUMOEMP, BOLSA, PROPINAS, RECIBOS, PRESTA, LIQUIDACIONES, DICIEMBRE, PROP_REGLAS, FUEROS, AMONESTACIONES, ACUERDOS, CONSUMO_SOCIOS, RESERVAS, EVENTOS_AG, GRUPO_MESONEROS });
 })();

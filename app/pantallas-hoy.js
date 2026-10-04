@@ -8,7 +8,12 @@
     return `<li><button class="fila" data-abrir="pendiente:${p.id}"><span class="lead ${tono}">${ic(icono)}</span><span class="medio"><b>${esc(p.titulo)}</b><small>${esc(p.sub)}${p.tipo === 'escalado' ? '' : ' · ' + esc(p.de)}</small></span><span class="fin"><span class="muted nowrap">${esc(p.edad)}</span>${ic('derecha', 's chev')}</span></button></li>`;
   };
 
+  // un solo ticket promedio en toda la app: venta neta ÷ pedidos, en dólares (lo usan el parte y Análisis)
+  const TK = A.TICKET = { ayer: { venta: 3006, pedidos: 101 }, domPasado: { venta: 2863, pedidos: 97 }, semana: { venta: D.SEMANAS[D.SEMANAS.length - 1][1], pedidos: 672 } };
+  const ticket = p => Math.round(p.venta / p.pedidos * 100) / 100;
+  A.ticket = ticket;
   function parte() {
+    const tA = ticket(TK.ayer), tP = ticket(TK.domPasado), cambio = (tA / tP - 1) * 100;
     return `<article class="parte" aria-label="El parte de la mañana">
       <div class="hoja-cab"><p class="etq">El parte de hoy · llegó a las 7:00 por WhatsApp</p><button class="enlace" data-abrir="kpi:parte">Cómo se calcula</button></div>
       <p class="parte-texto">Ayer domingo se vendieron <b>$ 3.006</b>, el 117 % de lo que hacía falta. Hoy la meta es <b>$ 2.573</b> para cubrir los costos del día.</p>
@@ -17,7 +22,7 @@
       <div class="mini-cifras">
         <button data-abrir="kpi:semana"><small>Domingo pasado</small><b>$ 2.863</b><small class="up">+5 %</small></button>
         <button data-abrir="kpi:anio"><small>Mismo domingo de 2025</small><b>$ 2.708</b><small class="up">+11 %</small></button>
-        <button data-abrir="kpi:ticket"><small>Pedidos · ticket</small><b>163 · $ 18,40</b><small class="down">−2 % ticket</small></button>
+        <button data-abrir="kpi:ticket"><small>Pedidos · ticket</small><b>${TK.ayer.pedidos} · ${dinero(tA)}</b><small class="${cambio >= 0 ? 'up' : 'down'}">${cambio >= 0 ? '+' : '−'}${fmt(Math.abs(cambio), 0)} % ticket</small></button>
       </div>
     </article>`;
   }
@@ -58,7 +63,7 @@
     </article>`;
   }
   const salud = () => puede('salud')
-    ? `<button class="salud" data-ir="salud">${ic('escudo', 's')}<span>El sistema está bien, con una cosa por mirar: la copia de Odoo sigue a mano los domingos. Respaldo de las 3:00 probado, WhatsApp conectado y saldo de IA para 26 días.</span></button>` : '';
+    ? `<button class="salud" data-ir="salud">${ic('escudo', 's')}<span>El sistema está bien, con una cosa por mirar: la copia de Odoo sigue a mano los domingos. Respaldo de las 3:00 probado, WhatsApp conectado y saldo de IA para 21 días.</span></button>` : '';
 
   function inicio() {
     const u = S.usuario; const mis = A.misPendientes();
@@ -80,7 +85,7 @@
         <div class="cifras">
           ${A.cifra({ etq: 'Caja por confirmar', valor: porConf, sub: 'el más viejo de las 12:40', ir: 'caja', tono: porConf ? 'aviso' : '' })}
           ${A.cifra({ etq: 'Pagos del lunes', valor: pagado + ' de ' + D.LUNES.length, sub: 'marcados como pagados', ir: 'pagos' })}
-          ${A.cifra({ etq: 'Lo fiscal esta semana', valor: '4', sub: 'el IVA vence mañana', ir: 'fiscal' })}
+          ${A.cifra({ etq: 'Lo fiscal esta semana', valor: D.OBLIGACIONES.filter(o => o.faltan >= 0 && o.faltan <= 6 && o.estado !== 'pagada' && !(o.sinPago && o.estado === 'declarada')).length, sub: 'el IVA vence mañana', ir: 'fiscal' })}
           ${A.cifra({ etq: 'Conciliación de septiembre', valor: '3 de 4', sub: 'falta el BNC', ir: 'bancos', tono: 'aviso' })}
         </div>
         <div class="rejilla"><div class="pila c7">${pend}</div><div class="pila c5">${estaSemana()}</div></div>${salud()}</div>`;
@@ -138,7 +143,7 @@
         <div class="rejilla">
           <div class="pila c7"><div class="sec"><h2>Radar de precios</h2><button class="enlace" data-ir="analisis/precios">Ver todos</button></div>
             ${A.tabla({ cols: [{ t: 'Insumo', cls: 'p' }, { t: 'Antes', cls: 'r x' }, { t: 'Ahora', cls: 'r' }, { t: 'Cambio', cls: 'e' }], filas: D.INSUMOS.map(i => { const c = (i.ahora / i.antes - 1) * 100; return { abrir: 'insumo:' + i.id, celdas: [`<b>${esc(i.nombre)}</b><small>${esc(i.prov)}</small>`, dinero(i.antes), dinero(i.ahora) + ' / ' + i.unidad, tag((c > 0 ? '+' : '') + fmt(c, 1) + ' %', c > 5 ? 'alerta' : c > 0 ? 'aviso' : 'ok')] }; }) })}</div>
-          <div class="pila c5">${pend}${eventosCompras()}</div>
+          <div class="pila c5">${pend}${A.tarjetaRendir ? A.tarjetaRendir(u.id) : ''}${eventosCompras()}</div>
         </div></div>`;
     }
     return `<div class="pagina">${saludo}${pend}</div>`;
@@ -152,9 +157,11 @@
     return x && A.tarjetaConsumo ? A.tarjetaConsumo(x.socio, { compacta: true }) : '';
   }
   function misRetiros() {
-    const s = D.SOCIOS.find(x => x.nombre === 'Luis Roberto');
+    const s = D.SOCIOS.find(x => x.nombre === 'Luis Roberto'); const pr = A.porRendirDe ? A.porRendirDe(s.nombre) : 0;
+    // que los retiros sean anticipo de utilidades es la propuesta de la Q5, todavía sin respuesta
     return `<article class="hoja"><div class="hoja-cab"><h2>${ic('cajachica')}Tus retiros este trimestre</h2></div>
-      <dl class="kv"><div><dt>Retirado (anticipo de utilidades)</dt><dd>${dinero(s.retirado, 'usd', 0)}</dd></div><div><dt>Plata por rendir</dt><dd>${dinero(s.porRendir, 'usd', 0)}</dd></div></dl>
+      <dl class="kv"><div><dt>Retirado (anticipo de utilidades) ${tag('Propuesta (Q5)', 'aviso')}</dt><dd>${dinero(s.retirado, 'usd', 0)}</dd></div><div><dt>Plata por rendir</dt><dd>${dinero(pr, 'usd', 0)}</dd></div></dl>
+      ${pr ? `<button class="enlace" data-ir="cajachica/rendir">Ver lo que falta rendir ${ic('derecha', 's')}</button>` : ''}
       <button class="btn sec" data-ir="boveda/sacar">${ic('menos', 's')}Registrar un retiro de la bóveda</button>
       <p class="muted">Es lo único que puedes registrar: tu propio retiro, con foto y código. Todo lo demás lo ves sin poder cambiarlo.</p></article>`;
   }
@@ -223,9 +230,15 @@
       parte: { t: 'Cómo se calcula la meta del día', b: [{ filas: [{ l: 'Costos fijos del mes', v: '$ 38.060' }, { l: 'Días de venta del mes', v: '30' }, { l: 'Lo variable (comida, comisiones)', v: '50,7 % de la venta' }, { l: 'Meta del día', v: '<b>$ 2.573</b>' }] }, { html: '<p class="muted">Meta = costos fijos ÷ días ÷ (1 − lo variable). Los costos fijos los escribe Alejandro en Parámetros. Las ventas salen del resumen diario del POS de Odoo.</p>' }] },
       semana: { t: 'Ayer contra el domingo pasado', b: [{ filas: [{ l: 'Domingo 4 oct', v: '$ 3.006' }, { l: 'Domingo 27 sep', v: '$ 2.863' }, { l: 'Diferencia', v: '<span class="up">+$ 143 (+5 %)</span>' }] }] },
       anio: { t: 'Ayer contra el mismo domingo de 2025', b: [{ filas: [{ l: 'Domingo 4 oct 2026', v: '$ 3.006' }, { l: 'Domingo 5 oct 2025', v: '$ 2.708' }, { l: 'Diferencia', v: '<span class="up">+$ 298 (+11 %)</span>' }] }, { html: '<p class="muted">Se compara el mismo día de la semana. La historia de Odoo arranca el 1 de octubre de 2025.</p>' }] },
-      ticket: { t: 'Pedidos y ticket promedio', b: [{ filas: [{ l: 'Pedidos ayer', v: '163 (+7 % contra el domingo pasado)' }, { l: 'Ticket promedio', v: '$ 18,40' }, { l: 'Ticket del domingo pasado', v: '$ 18,77' }] }] },
+      // la misma cuenta en el parte y en Análisis (venta neta ÷ pedidos, en dólares): el parte usa el día de ayer y Análisis, la semana
+      ticket: { t: 'Ticket promedio', b: [{ filas: [
+        { l: 'Ayer, domingo 4 oct', v: `${dinero(ticket(TK.ayer))} <small class="tenue">${dinero(TK.ayer.venta, 'usd', 0)} ÷ ${TK.ayer.pedidos} pedidos · el del parte</small>` },
+        { l: 'Domingo 27 sep', v: `${dinero(ticket(TK.domPasado))} <small class="tenue">${dinero(TK.domPasado.venta, 'usd', 0)} ÷ ${TK.domPasado.pedidos} pedidos</small>` },
+        { l: 'Esta semana (28 sep – 4 oct)', v: `${dinero(ticket(TK.semana))} <small class="tenue">${dinero(TK.semana.venta, 'usd', 0)} ÷ ${TK.semana.pedidos} pedidos · el de Análisis</small>` },
+        { l: 'Pedidos ayer', v: `${TK.ayer.pedidos} <small class="tenue">${fmt((TK.ayer.pedidos / TK.domPasado.pedidos - 1) * 100, 0)} % más que el domingo pasado</small>` }] },
+        { titulo: 'Cómo se calcula', html: `<p><b>Ticket promedio = venta neta ÷ pedidos.</b> La misma cuenta en las dos pantallas: el parte usa el día de ayer y Análisis, la semana.</p><ul class="tiempo"><li><time>1</time><span><b>Venta neta:</b> lo cobrado en el POS, sin IVA, ya restados los anulados, las devoluciones, los descuentos y las cortesías. Es la misma venta del parte. El 10 % de servicio no entra ${tag('Por confirmar', 'aviso')}</span></li><li><time>2</time><span><b>Pedidos:</b> las cuentas cerradas en el POS (mesa, para llevar y delivery). No cuentan los consumos de los socios ni del personal.</span></li><li><time>3</time><span><b>En dólares:</b> cada venta a la tasa BCV de su día, aunque la carta esté en euros.</span></li></ul>` }] },
     }[id];
-    return { titulo: k.t, sub: 'Parte de la mañana', mod: 'analisis', bloques: k.b, acciones: [{ txt: 'Ver en Análisis', acc: 'ir-a', arg: 'analisis', icono: 'analisis' }] };
+    return { titulo: k.t, sub: id === 'ticket' ? 'Indicador · parte de la mañana y Análisis' : 'Parte de la mañana', mod: 'analisis', bloques: k.b, acciones: S.ruta === 'analisis' ? [] : [{ txt: 'Ver en Análisis', acc: 'ir-a', arg: 'analisis', icono: 'analisis' }] };
   };
   ACC['ir-a'] = arg => A.ir(arg);
 
@@ -256,32 +269,82 @@
 
   /* ---------- revisión del prototipo ---------- */
   const REV = [
-    ['Para decidir (Alejandro)', [
+    ['Para decidir (Alejandro) · dinero y socios', [
       ['?', 'Los $ 500 de consumo de los socios', '¿Son $ 500 cada uno o entre los dos? Propuesta: a precio de carta; lo que pase del tope se suma a los retiros de ese socio; lo que sobra no se acumula; las invitaciones a proveedores o clientes no cuentan.'],
-      ['?', 'Préstamos al personal', 'Propuesta: los préstamos los apruebas tú; los adelantos de hasta $ 60, Jose. Sin intereses, hasta 12 cuotas, y entre todos los descuentos no más de un tercio de lo que gana en la quincena (el tope legal hay que confirmarlo con Cecilia o el abogado). Si alguien se va, el saldo sale de su liquidación.'],
-      ['?', 'Quién toma las reservas', 'Propuesta: Patricia, la supervisora, con un usuario que solo ve el calendario. Hay que crear el grupo «Mesoneros del restaurante» en WhatsApp y meter al número del bot. ¿Abono de $ 5 por persona para grupos de 10 o más?'],
-      ['?', 'Cumpleaños del personal', '¿Se da el día libre o un detalle? ¿Se avisa al grupo del personal ese día? Hoy solo avisa a RRHH y a la supervisora 3 días antes.'],
-      ['?', 'La base de las prestaciones', 'Con la regla del 29-ago, la nómina formal sale casi en cero (su salario legal es el mínimo de Bs 130) y la interna se calcula sobre $ 100 al mes (mínimo + cestaticket + un margen de $ 60 por confirmar). Revisarlo con Cecilia y el abogado.'],
-      ['?', '¿Eliana edita o solo ve?', 'Hoy aparece como «Socia con edición, por confirmar». Si edita, puede ser tu suplente para aprobar cuando no estés.'],
-      ['?', 'Luis «solo ve», pero registra su retiro de la bóveda', 'Así lo decidiste el 3-oct. Queda como única excepción. ¿Y el crédito a clientes (pregunta Q7)? Hoy no lo puede dar.'],
+      ['?', 'Socios: su parte, los retiros y el reparto', '¿Con qué parte está cada socio y las cuentas a nombre de Eliana cuentan como del negocio (Q4)? Propuesta para la Q5: los retiros son anticipos de utilidades, se registran el mismo día, se avisa al otro socio y se liquidan cada trimestre. Falta el tope de retiro por socio al mes y si el reparto lo aprueban los dos con su código. En el prototipo la parte de cada uno sale «por confirmar».'],
       ['?', 'Retiros de más de $ 200', 'La propuesta Q1 dice que los apruebes tú. El retiro de Luis de $ 500 quedó registrado al instante. ¿Pide tu aprobación o no?'],
-      ['?', '¿Luis ve los sueldos?', 'La regla dice que solo dueño, RRHH y contabilidad. En el prototipo Luis ve la nómina agrupada, sin sueldos por persona.'],
-      ['?', 'Nómina en 3 pasos necesita 3 personas', 'Prepara Andreina, revisa Jose, apruebas tú. Andreina todavía no ha entrado: sin ella no hay quien prepare.'],
+      ['?', 'Fondo de cada caja y caja chica', '¿Con cuánto arranca cada caja, en $ y en Bs, y a qué tasa recibe dólares si la carta está en euros (Q2)? ¿Se pagan gastos desde la caja (Q3)? Propuesta: un fondo fijo en $ y otro en Bs que defines tú, el resto a la bóveda cada noche, y una caja chica aparte de $ 150 con foto de cada gasto y reposición semanal.'],
+      ['?', 'El grupo de WhatsApp de la bóveda', '¿Cuál es y quiénes están (Q9)? Propuesta: un grupo nuevo solo con los socios y quien custodia, con el bot dentro. Hasta que exista se muestra «por crear», como el de mesoneros.'],
+      ['?', 'Pagos sin factura de junio a agosto', 'En Odoo hay pagos de esos meses sin factura a nombre de gente de la casa, y hay que saber qué fue cada uno (Q6). Propuesta: una sesión con Jose para clasificarlos uno por uno: traspaso, retiro, reintegro o pago a un proveedor.'],
+      ['?', 'Dónde se ve lo pagado por tasa', 'Cada pago guarda su tasa (dólar BCV, euro BCV o USDT) y los lunes se ve cuánto toca pagar en cada una, con su promedio, las comisiones y lo que se ganó o perdió por la tasa (29-ago). El PDF del grupo queda como hoy. Propuesta: en la pantalla del lunes y en un mensaje solo para ti, a las 6:00 y al terminar de pagar.'],
       ['?', 'Cambio de cuenta de un proveedor', 'Lo cambia Jose con su código y te avisa. En Pagos del lunes la cuenta queda «por verificar» hasta que confirmes por teléfono. ¿Hace falta tu aprobación además?'],
-      ['?', 'Figma o este prototipo', 'El Figma tiene otra paleta. La sesión que programa va a copiar este prototipo. Confirma que manda este.'],
+      ['?', 'Quién carga las compras en Odoo', '¿Quién carga hoy las órdenes de compra, las recepciones y las facturas: Jose o Marisel (Q8)? Propuesta: aclararlo antes de la fase 9; quien recibe la mercancía pone el precio real.'],
+    ]],
+    ['Para decidir (Alejandro) · personal y nómina', [
+      ['?', 'Préstamos al personal', 'Propuesta: los préstamos los apruebas tú y los adelantos de hasta $ 60, Jose, siempre que los anote otra persona: quien prepara no aprueba, y si los anota él, te llegan a ti. Sin intereses, hasta 12 cuotas, y entre todos los descuentos no más de un tercio de lo que gana en la quincena (el tope legal lo confirman Cecilia o el abogado). Si alguien se va, el saldo sale de su liquidación.'],
+      ['?', 'La base de las prestaciones', 'Con la regla del 29-ago la nómina formal sale casi en cero: se toma solo el mínimo de Bs 130 y queda fuera el 10 %, que por ley cuenta para prestaciones, vacaciones y utilidades. La interna se calcula sobre $ 100 al mes (mínimo + cestaticket + un margen de $ 60 por confirmar), y su recibo pone todo como «Salario». Revisarlo con Cecilia y el abogado: si el 10 % entra en la base y qué conceptos lleva el recibo interno.'],
+      ['?', 'Quincena de quien está de vacaciones', 'El prototipo le paga la quincena completa y además, al empezar, esos mismos días más el bono: los días salen dos veces. Propuesta: sigue cobrando su quincena y al empezar recibe solo el bono vacacional. Confirmarlo con Cecilia.'],
+      ['?', 'Faltas y extras en la nómina formal', 'El incremento del cestaticket es fijo (29-ago), pero el prototipo calcula el día con todo lo que gana la persona: una falta le quita parte del incremento. Con el salario legal, faltas y extras salen en céntimos. Decidirlo con el abogado antes del motor de nómina.'],
+      ['?', 'El 10 %: nuevos, vacaciones y reposos', 'Quien entra arranca en 0 % sin regla de cuándo empieza a ganar, y el prototipo le recorta la parte a todo el que no trabajó el período completo, también por vacaciones o reposo. ¿Desde cuándo gana un nuevo y qué pasa en vacaciones y reposos? Verlo con Cecilia y el abogado.'],
+      ['?', 'Cómo se reparten las propinas', 'Hoy se anotan por mesonero en el cierre de caja y se pagan los lunes; el prototipo lo deja «por confirmar». Propuesta: seguir como hoy, por mesonero; Jose o Andreina reparten y tú das el visto final cada lunes (te llega como pendiente).'],
+      ['?', 'Cumpleaños del personal', '¿Se da el día libre o un detalle? ¿Se avisa al grupo del personal ese día? Hoy solo avisa a RRHH y a la supervisora 3 días antes.'],
+      ['?', '¿Luis ve los sueldos?', 'La regla dice que solo dueño, RRHH y contabilidad. En el prototipo Luis ve la nómina agrupada, sin sueldos ni préstamos por persona.'],
+      ['?', 'Nómina en 3 pasos necesita 3 personas', 'Prepara Andreina, revisa Jose, apruebas tú. Andreina todavía no ha entrado: sin ella no hay quien prepare.'],
+    ]],
+    ['Para decidir (Alejandro) · permisos, reservas y seguridad', [
+      ['?', '¿Eliana edita o solo ve?', 'Hoy aparece «por confirmar», con permiso para editar lo operativo del dinero. El suplente para aprobar, por ahora, eres tú mismo (3-oct): otro se nombra cuando la app esté andando.'],
+      ['?', 'Luis «solo ve», pero registra su retiro de la bóveda', 'Así lo decidiste el 3-oct. Pero en el prototipo Luis también firma como testigo del conteo de la bóveda y puede dar crédito a clientes hasta $ 100 (Q7): ¿se quedan esas dos? En el prototipo, lo que se lleva «por rendir» lo cierran Jose o Alejandro a su nombre, con las fotos que mande Luis.'],
+      ['?', 'Quién cambia los parámetros', 'Hoy contabilidad puede cambiar casi todos sin código ni aviso: desde cuánto un gasto pide aprobación hasta el tope de consumo de los socios o el bloqueo por claves malas. Los costos fijos de la meta del día ya se decidió que los pones tú. Propuesta: Jose edita los catálogos (categorías, métodos de pago) y el resto lo cambias tú.'],
+      ['?', 'Quién se encarga de los respaldos', 'Falta quién hace la copia de cada noche fuera del servidor y la prueba mensual de recuperarla. Propuesta: el programador, por unos $ 5 al mes, y la llave para abrir la copia la guardas tú, fuera de línea.'],
+      ['?', 'Quién toma las reservas', 'Propuesta: Patricia, la supervisora, con un usuario que solo ve el calendario. Hay que crear el grupo «Mesoneros del restaurante» en WhatsApp y meter al número del bot. ¿Hay salón para eventos privados? ¿Abono de $ 5 por persona para grupos de 10 o más?'],
+      ['?', '¿Jose ve los fueros?', 'Los expedientes, la salud y los fueros (por ejemplo, el maternal) quedaron solo para ti y RRHH. ¿Contabilidad necesita ver los fueros para preparar las liquidaciones? Por ahora no los ve.'],
       ['?', 'Bloqueo por claves malas', 'Propuesta: 5 intentos y 15 minutos de bloqueo, y te avisa. No estaba definido.'],
+    ]],
+    ['Para decidir (Alejandro) · finanzas nuevas', [
+      ['?', 'Partir la fase 4 en dos', 'La investigación de finanzas propone adelantar a la fase 4 «comida + personal» (estaba en la 11) y «cuánto deja cada plato» (estaba en la 12), y anotar la merma junto al termómetro. La fase quedaría muy cargada: 4a para comida y precios, 4b para controles y cierre de la semana.'],
+      ['?', 'Meta de comida + personal', '¿Qué % quieres? La referencia de un restaurante es 60-65 %; mientras decides, la app compara contra tu propia historia. ¿Y la venta se mide con el 10 % de servicio dentro o fuera?'],
+      ['?', 'Colchón de caja', '¿Cuántos días de salidas quieres tener siempre guardados, y dónde (bóveda en $ o USDT)? Sin ese número, la plata libre y las próximas 13 semanas salen sin semáforo. Lo de impuestos y diciembre, ¿se aparta solo en la app o en una cuenta aparte con un traspaso semanal?'],
+      ['?', 'Conteo de control a ciegas', 'Un conteo de 8 a 12 artículos caros, hecho sin ver cuánto «debería haber» y por alguien que no recibe la mercancía. Cambia lo decidido el 3-oct (los conteos solo en Odoo), aunque no reemplaza el inventario oficial. ¿Quién recibe y pesa la carne? No puede ser compras.'],
+      ['?', 'Merma y comida del personal', 'Hoy no se anota lo que se bota en cocina ni la comida del turno. La comida del personal, ¿son platos de la carta o una olla aparte? ¿Cocina anota la merma con un usuario propio o con fotos a un grupo? ¿Qué es un «servicio» y qué es un «trago» en la barra?'],
+      ['?', 'Pedirle cambios en Odoo al programador', 'Entrada con clave para cada empleado, que solo los supervisores cambien precios, un método «Cortesía» y una lista de motivos para anular y devolver. Así se puede ver lo que se deja de cobrar por tipo y por persona (solo tú y la supervisión).'],
+      ['?', 'Caja por turno y conteo sorpresa', '¿Una sesión del POS por turno, para saber de quién es cada descuadre, o el cierre del día anotando quién tuvo la gaveta? ¿Un socio hace cada mes un conteo sorpresa de la bóveda?'],
+      ['?', 'Tope de fiado y margen por plato', '¿Cuánto es lo máximo que nos pueden deber todos los clientes juntos y solo tú das una deuda por perdida? ¿Qué margen quieres por categoría de plato y cuándo te avisa la app si se pierde?'],
+    ]],
+    ['Para decidir (Alejandro) · cómo se usa', [
+      ['?', 'Firmar con código o con la cara', 'Hoy cada firma pide el código de 6 números: un lunes son unos 6 seguidos. Propuesta: firmar con Face ID o la huella del teléfono, con el código como respaldo. Otra opción: después de un código, 5 minutos sin pedirlo, salvo bóveda, permisos y cuentas de proveedores.'],
+      ['?', 'Motivo escrito para todo o solo donde importa', 'Hoy hasta mover una mesa pide escribir un motivo. Propuesta: tres niveles. Sin motivo lo que solo describe (mesa, notas, cargo); «Deshacer» y «Reabrir» en lo de un toque; motivo con botones y código en plata, cuentas, sueldos y lo ya cerrado.'],
+      ['?', 'Mientras Andreina no entra', '¿Quién clasifica las faltas y prepara la quincena? Propuesta: Jose como suplente, con el permiso que vuelve a Andreina cuando active su cuenta. Si no, te llega a ti, o la nómina del 15 se queda esperando.'],
+      ['?', 'Por dónde te llegan las firmas pendientes', 'Propuesta: por WhatsApp del bot, como el parte de las 7:00, con un recordatorio cada 4 horas en horario de trabajo. Lo urgente (lo que vence hoy, el lote del lunes) también por ntfy, que suena aunque silencies WhatsApp.'],
+      ['?', 'Cuánta venta contar hasta la nómina', 'Para «¿Llegamos a la nómina?»: propuesta, la venta más baja del mismo día de la semana en las últimas 4 semanas. La meta de comida + personal es la misma pregunta de «finanzas nuevas».'],
+      ['?', 'Quién confirma los reportes Z', '¿Solo Jose, o Jose o Cecilia? En los dos casos, a Cecilia le sale «Pedir a Jose los Z que faltan», porque subirlos es trabajo del local.'],
+      ['?', 'A qué grupo se publica el horario', '¿Un grupo de WhatsApp por área (cocina, servicio, caja, delivery, seguridad) o uno solo del personal? Hoy no existe ninguno, y para mencionar a cada persona hace falta su teléfono en la ficha.'],
+      ['?', 'Quién apaga los avisos automáticos de reservas', '¿Quien toma las reservas, con una confirmación y quedando en el registro, o solo tú desde Parámetros?'],
+    ]],
+    ['Para revisar (Jose)', [
+      ['?', 'Revisar el prototipo y dar el visto bueno', 'Antes de programar las primeras pantallas hace falta el visto bueno de Jose. Propuesta: que lo recorra con «Ver como» Jose y diga qué cambiaría.'],
     ]],
     ['Agregado ahora: recursos humanos, calendario y consumos', [
       ['✓', 'Recursos humanos completo (6 pantallas)', 'Personal (ficha con cumpleaños, contrato, cuenta, salud y expediente; avisos; altas y egresos; protección y disciplina) · Asistencia y horas (horario de la semana, horas trabajadas, faltas y justificativos, redobles y días extra) · Vacaciones y reposos (libro de vacaciones, quién está fuera, justificativos médicos, permisos) · Nómina (recibo de pago por concepto, 10 % del mes, propinas, recibos firmados) · Préstamos y descuentos · Prestaciones y liquidaciones.'],
-      ['✓', 'Préstamos en cuotas', 'Se registra, lo apruebas con tu código, se paga desde una cuenta y cada quincena se descuenta sola. Las cuotas se ven como casillas; si alguien falta, la cuota se corre al final. Quien se va lo paga con su liquidación.'],
-      ['✓', 'Consumos', 'Los de ustedes dos en Caja chica y socios, con el tope de $ 500 al mes. Los del personal en Préstamos y descuentos: corte el 27, se descuentan en la 2.ª quincena. Ambos llegan del POS.'],
+      ['✓', 'Préstamos en cuotas', 'Se registra, lo apruebas con tu código, se paga desde una cuenta y cada quincena la cuota se descuenta sola. Las cuotas se ven como casillas; si alguien falta, la cuota se corre al final. Quien se va lo paga con su liquidación.'],
+      ['✓', 'Consumos', 'Los de los socios, en Caja chica y socios, con el tope de $ 500 al mes. Los del personal, en Préstamos y descuentos: corte el 27, se descuentan en la 2.ª quincena. Ambos llegan del POS.'],
       ['✓', 'Calendario', 'El mes con capas (reservas, eventos, personal, fiscal y pagos), las reservas que avisan al grupo de mesoneros, los eventos y el calendario del personal: vacaciones, contratos que vencen y cumpleaños.'],
       ['✓', 'Usuaria nueva propuesta: Patricia (reservas)', 'Cambia «Ver como» a Patricia para ver lo que vería la supervisora: solo el calendario.'],
+    ]],
+    ['Corregido el 4 de octubre', [
+      ['✓', 'Lo cerrado ya no se edita', 'Una factura pagada, una obligación declarada, una propina pagada o un gasto registrado se corrigen con un movimiento al revés, con motivo y código. Al enviar el lote del lunes, sus facturas quedan pagadas.'],
+      ['✓', 'El lunes resta la retención del IVA y el cuadre suma las capturas', 'La parte retenida va al SENIAT, no al proveedor. Si la lista menos lo no pagado no da igual a lo que dicen las capturas, aprobar pide una nota. Cada proveedor puede tener varias cuentas, con su titular.'],
+      ['✓', 'Pagar la nómina como a los proveedores', 'Persona por persona, con el banco y la captura casada. Las corridas formal, interna y del 10 % salen separadas, con el premio del mes. El recibo trae los recargos de noche, domingo y feriado.'],
+      ['✓', 'Fiscal en bolívares y cada aporte con su base', 'Pensiones, IVSS, FAOV, INCES y la patente (con su mínimo) se calculan cada uno con su base, y el monto es el mismo en todas las pantallas. Libros y retenciones en Bs a la tasa de cada día. Nuevas en el calendario: RNET, aseo, ISLR anual, asamblea y estados financieros.'],
+      ['✓', 'Cada quien ve lo suyo', 'Luis y Eliana ya no ven préstamos, finiquitos ni soportes médicos por persona. Expedientes y salud, solo tú y RRHH. Jose y Andreina anotan lo acordado de las horas.'],
+      ['✓', 'Quien prepara no aprueba', 'Un adelanto lo aprueba alguien distinto de quien lo anota; los costos fijos solo los cambias tú; cada obligación fiscal la revisa otra persona. Descargar cualquier archivo pide el código.'],
+      ['✓', 'Bóveda y socios', 'El conteo de la bóveda es a ciegas: cada uno cuenta sin ver lo esperado. Lo que se lleva «por rendir» se cierra con factura o vuelto. Cada socio tiene su cuenta de aportes y préstamos.'],
+      ['✓', 'Propuestas marcadas como propuestas', 'Lo que espera tu respuesta (fondo de caja, parte de cada socio, anticipo de utilidades, grupo de la bóveda, rol de Eliana) sale como «Propuesta» o «Por confirmar». Un solo ticket promedio en toda la app.'],
+      ['✓', 'Fechas y cifras del SENIAT', 'Revisado contra las Gacetas: las pensiones de agosto vencían el 16 de septiembre, no el 30; los licores pagan 16 % (el 31 % es para bienes de lujo); Grandes Patrimonios (14 oct y 12 nov) y el impuesto del aviso del toldo ya están en Configuración; el lunes 26 de octubre no abren los bancos. Cinco preguntas nuevas para Cecilia, dos urgentes.'],
     ]],
     ['Agregado el 4 de octubre', [
       ['✓', 'Entrar con usuario, clave y código', 'Más la invitación de alguien nuevo (Andreina): clave, código con el cuadro y 8 códigos de respaldo. Modo aprendiz de 14 días.'],
       ['✓', 'Cada persona ve solo lo suyo', 'Cambia «Ver como» arriba. Menú, Inicio y pestañas cambian por persona. Luis y Cecilia ven el aviso «Solo lectura» donde no editan.'],
-      ['✓', 'Todo se abre y todo se edita', 'Cualquier fila, cifra o tarjeta abre su ficha a la derecha. Si tienes permiso, «Editar» pide el motivo y queda en el registro de cambios.'],
+      ['✓', 'Todo se abre; lo cerrado no se edita', 'Las filas, cifras y tarjetas abren su ficha a la derecha (quedan unos pocos totales que solo informan). Con permiso, «Editar» pide el motivo y queda en el registro de cambios. Lo pagado, declarado o cerrado no se edita: se corrige con un movimiento al revés, una declaración sustitutiva o una nómina de reemplazo.'],
       ['✓', 'Módulo Fiscal para Cecilia', 'Calendario SENIAT con las fechas reales del RIF terminado en 4, hoja de IVA, reportes Z, libros, retenciones, parafiscales, máquina fiscal, permisos, paquete del mes y sus preguntas.'],
       ['✓', 'Parámetros', 'Negocio y sede, cuentas, tasas y valores legales, catálogos, reglas, antifraude, avisos, nómina y fiscal.'],
       ['✓', 'Usuarios y permisos', 'Quién entra y qué ve (matriz editable), quién aprueba qué, invitar, quitar acceso, cuentas de los bots.'],
@@ -291,16 +354,36 @@
     ]],
     ['Queda para después (no bloquea la fase 0)', [
       ['·', 'Cerrar mi caja en el teléfono', 'Fase 5. Hoy el cierre sigue en papel.'],
-      ['·', 'Reloj biométrico y motor de nómina', 'Espera la muestra del Excel del reloj. Las horas que se ven en Asistencia son un ejemplo.'],
+      ['·', 'Reloj biométrico y motor de nómina', 'Espera la muestra del Excel del reloj y la lista de quiénes son los 10 de la nómina formal. Las horas que se ven en Asistencia son un ejemplo. Ojo: el motor suma los recargos de noche (30 %) y de domingos y feriados (50 %), que la nómina de hoy no trae, así que va a costar más.'],
       ['·', 'Mensajes al grupo de mesoneros', 'Se conectan con el bot cuando exista el grupo. El recordatorio al cliente se manda a mano desde el WhatsApp del restaurante.'],
-      ['·', 'Libro de compras, TXT de IVA y XML de ISLR', 'Fase 9. Espera el candado de Odoo.'],
-      ['·', 'Estado de resultados y proyección de compras', 'Fases 11 y 12.'],
+      ['·', 'Fase 9: compras, consumos y comparación con Odoo', 'Libro de compras, TXT de IVA y XML de ISLR. También los consumos de los proveedores en el restaurante, que se descuentan de su pago, y «Lo que no cuadra con Odoo», que dirá cuándo el paralelo lleva 2 semanas cuadrando. Espera el candado de Odoo.'],
+      ['·', 'Resultados, cuánto deja cada plato y compras', 'Fases 11 y 12. «Cuánto deja cada plato» usa las facturas que corrige Jose y las recetas ya arregladas (o pasa a la fase 4, si así lo decides).'],
       ['·', 'Campañas a clientes con su permiso', 'Fase 8.'],
+      ['·', 'Clave para ver las fotos del bot', 'La Caja del día (fase 1) necesita una clave que solo deje mirar las fotos que guarda el bot. La pide Alejandro al programador.'],
+      ['·', 'Copia de la base casi al minuto', 'Antes de usar de verdad la bóveda y la nómina, además de la copia de cada noche hace falta una que se guarde a cada rato. La monta el programador con el servidor.'],
+    ]],
+    ['Ideas de finanzas para más adelante', [
+      ['·', 'Precios de la carta en euros contra costos en dólares', 'Cuánto vale hoy 1 € de la carta en dólares, cuánto margen perdió cada plato desde su último ajuste y un simulador antes de cambiar un precio. Fase 4.'],
+      ['·', 'Merma con foto y recuento a ciegas', 'La merma evitable se anota con foto, motivo y quién; carne y licores se recuentan sin ver lo esperado, y cada ajuste lleva su motivo. Fase 4, después de pesar una vara de cada corte.'],
+      ['·', 'Pesar la carne al recibir', 'Quien recibe pesa y sube la foto de la balanza; en la lista del lunes se ve si llegó completa. Fases 2 a 9.'],
+      ['·', 'Lo que no se cobró en el POS', 'Anulados, devoluciones, descuentos y cortesías aparte de la venta, por tipo y, cuando Odoo lo permita, por persona. Fase 4.'],
+      ['·', 'Revisión del mes del dueño', '15 minutos con tu código: diferencias del banco aclaradas a mano, lo que contabilidad aprobó sola, fichas cambiadas y 5 pagos al azar con su comprobante. Fase 2.'],
+      ['·', 'Cierre de caja a ciegas', 'La cajera guarda su conteo antes de ver lo esperado; faltantes y sobrantes se suman aparte, en dólares y por persona. Fase 5. El conteo de la bóveda ya es a ciegas en el prototipo.'],
+      ['·', 'Cada gasto con su renglón y un presupuesto', 'Luz, gasoil, gas, mantenimiento, publicidad… cada pago lleva su renglón desde la fase 2, y con eso sale el presupuesto y el estado de resultados sin trabajo extra.'],
+      ['·', 'Venta por hora contra horas pagadas', 'Debajo de cada día del horario, la venta esperada y los $ por hora, con aviso si se anota un redoble en un día flojo. Fase 4.'],
+      ['·', 'Cerrar la semana', 'Al cerrar, los números quedan congelados y lo que llegue tarde entra como «ajuste de semanas anteriores». Fase 4.'],
+      ['·', 'Bolívares parados y compra de dólares', 'Cuánto se pierde por tener bolívares esperando y cuánto se pagó de más en cada compra de dólares o USDT. Fases 2 a 10.'],
+      ['·', 'Cuánto cuesta cobrar con cada forma de pago', 'La comisión de cada una (el punto, partido en débito y crédito) y los días hasta poder usar la plata. Tarifas desde la fase 0; la tabla, en la 5.'],
+      ['·', 'Plata libre y las próximas 13 semanas', 'Lo que hay menos lo que no es nuestro (IVA, retenciones, propinas, el 10 %) y lo comprometido, y una proyección que avisa 2-3 semanas antes si la plata no alcanza. Fases 4 y 10.'],
+      ['·', 'Apartar impuestos y diciembre', '«De esto ya no es nuestro»: impuestos y la cuota de diciembre, también al sacar plata de la bóveda y al aprobar los pagos del lunes. Fases 3 y 10.'],
+      ['·', 'Fiado, plazos y depósito', 'Tope total de fiado, plazo pactado contra días reales de pago por proveedor y cuántos días de costo hay parados en el depósito. Fases 2, 4 y 8.'],
+      ['·', 'Cuánto deja cada evento', 'Venta menos comida, gastos y personal de cada feria o evento privado, y cuánto hay que vender para no perder antes de inscribirse. Fase 4.'],
     ]],
   ];
+
   PANT.revision = {
     titulo: 'Lo que falta', grupo: 'Hoy', icono: 'lista', mod: 'inicio', oculta: true, libre: true,
-    render: () => `<div class="pagina">${A.cab('Revisión del prototipo · 5 de octubre', 'Lo que falta y lo que cambió', 'Comparé el prototipo con todo lo decidido en el esquema, el repaso y el registro de decisiones. Esto es lo que necesita tu respuesta, lo que se agregó hoy y lo que queda para después.')}
+    render: () => `<div class="pagina">${A.cab('Revisión del prototipo · 5 de octubre', 'Lo que falta y lo que cambió', 'Se comparó el prototipo con todo lo decidido en el esquema, el repaso y el registro de decisiones. Primero va lo que tiene que decidir Alejandro y lo que tiene que revisar Jose; después, lo que se agregó, lo que se corrigió y lo que queda para después.')}
       ${REV.map(([t, items]) => `<div class="sec"><h2>${esc(t)}</h2></div><ul class="lista revision">${items.map(([m, a, b]) => `<li><span class="lead ${m === '?' ? 'aviso' : m === '✓' ? 'ok' : ''}" style="width:30px;height:30px">${m === '?' ? ic('info', 's') : m === '✓' ? ic('check', 's') : ic('reloj', 's')}</span><span><b>${esc(a)}</b><small>${esc(b)}</small></span></li>`).join('')}</ul>`).join('')}
     </div>`,
   };
