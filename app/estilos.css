@@ -485,9 +485,12 @@ button.fila:hover { background: var(--hoja-2); }
 @container app (min-width: 720px) { .toast { bottom: 24px; } }
 
 /* ---------- entrar (login) ---------- */
-.login { position: absolute; inset: 0; overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--papel); }
+.login { position: absolute; inset: 0; overflow-y: auto; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(100%, max-content); background: var(--papel); }
 .login-arte { display: none; }
-.login-caja { display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 32px 22px; width: min(420px, 100%); margin-inline: auto; min-height: 100%; }
+.login-caja { display: flex; flex-direction: column; justify-content: flex-start; gap: 18px; padding: 32px 22px; width: min(420px, 100%); margin-inline: auto; }
+/* centrado que no se come el título: si el contenido es más alto que la pantalla, empieza arriba y se desplaza */
+.login-caja > :first-child { margin-top: auto; }
+.login-caja > :last-child { margin-bottom: auto; }
 .login-caja h1 { font-size: 30px; }
 .login-paso { display: flex; flex-direction: column; gap: 14px; }
 .login-pie { font-size: 12.5px; color: var(--tinta-3); }
