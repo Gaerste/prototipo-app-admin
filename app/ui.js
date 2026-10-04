@@ -71,19 +71,24 @@
 
   // gráfico de barras simple con hover (una serie)
   A.barrasSVG = ({ datos, alto = 180, meta = null, etiquetaY = v => v, resaltar = -1, id = 'g' }) => {
-    const W = 640, H = alto, L = 44, R = 8, T = 14, B = 26;
-    const max = Math.max(...datos.map(d => d[1]), meta || 0) * 1.08;
+    // con meta, el margen derecho guarda su etiqueta para que no tape barras
+    const W = 640, H = alto, L = 44, R = meta ? 66 : 8, T = 14, B = 26;
+    // escalones redondos (1, 2, 2,5 o 5 × 10ⁿ) para que el eje nombre valores reales
+    const crudo = Math.max(...datos.map(d => d[1]), meta || 0) * 1.04 || 1;
+    const base = Math.pow(10, Math.floor(Math.log10(crudo / 4)));
+    const escalon = [1, 2, 2.5, 5, 10, 20].map(k => k * base).find(e => Math.ceil(crudo / e) <= 6), ticks = Math.ceil(crudo / escalon);
+    const max = escalon * ticks;
     const n = datos.length, paso = (W - L - R) / n, bw = Math.min(34, paso * .62);
     const y = v => T + (H - T - B) * (1 - v / max);
-    const ticks = 4; let g = '';
-    for (let i = 0; i <= ticks; i++) { const v = max / ticks * i; const yy = y(v); g += `<line class="rej" x1="${L}" x2="${W - R}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/><text x="${L - 6}" y="${(yy + 3.5).toFixed(1)}" text-anchor="end">${etiquetaY(v)}</text>`; }
+    let g = '';
+    for (let i = 0; i <= ticks; i++) { const v = escalon * i; const yy = y(v); g += `<line class="rej" x1="${L}" x2="${W - R}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/><text x="${L - 6}" y="${(yy + 3.5).toFixed(1)}" text-anchor="end">${etiquetaY(v)}</text>`; }
     const barras = datos.map((d, i) => {
       const x = L + paso * i + (paso - bw) / 2, yy = y(d[1]), h = H - B - yy;
       const r = Math.min(4, h / 2);
       const path = `M${x},${H - B} V${yy + r} Q${x},${yy} ${x + r},${yy} H${x + bw - r} Q${x + bw},${yy} ${x + bw},${yy + r} V${H - B} Z`;
       return `<g data-tip="${esc(d[0])}: ${esc(d[2] || etiquetaY(d[1]))}" data-x="${(x + bw / 2) / W}" data-y="${yy / H}"><rect class="hit" x="${L + paso * i}" y="${T}" width="${paso}" height="${H - T - B}"/><path d="${path}" style="fill:${i === resaltar ? 'var(--boligrafo)' : 'var(--tinta-3)'};opacity:${i === resaltar ? 1 : .55}"/>${i % 2 === (n % 2 ? 0 : 1) || i === n - 1 ? `<text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${esc(d[0])}</text>` : ''}</g>`;
     }).join('');
-    const m = meta ? `<line class="meta" x1="${L}" x2="${W - R}" y1="${y(meta)}" y2="${y(meta)}"/><text x="${W - R}" y="${y(meta) - 5}" text-anchor="end" style="fill:var(--tinta)">Punto de equilibrio</text>` : '';
+    const m = meta ? `<line class="meta" x1="${L}" x2="${W - R}" y1="${y(meta)}" y2="${y(meta)}"/><text x="${W - R + 6}" y="${y(meta) + 3.5}" style="fill:var(--tinta)">Equilibrio</text>` : '';
     return `<div style="position:relative" data-graf="${id}"><svg class="graf" viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfico de barras">${g}<line class="eje" x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}"/>${barras}${m}</svg><span class="tip" hidden></span></div>`;
   };
   document.addEventListener('mouseover', e => {

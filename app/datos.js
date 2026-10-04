@@ -70,7 +70,7 @@ window.DB = (() => {
     { id: 'BVCE', nombre: 'Venezolano · Eliana', tipo: 'Banco', mon: 'bs', num: '•••• 7305', titular: 'Eliana', saldo: 935410.80, ultimo: 'Ayer 22:40' },
     { id: 'BVCJ', nombre: 'Venezolano · la empresa', tipo: 'Banco', mon: 'bs', num: '•••• 1196', titular: 'La empresa', saldo: 1408220.42, ultimo: 'Hoy 6:58' },
     { id: 'BNC', nombre: 'BNC · Alejandro', tipo: 'Banco', mon: 'bs', num: '•••• 6640', titular: 'Alejandro', saldo: 512006.30, ultimo: 'Ayer 19:12' },
-    { id: 'ZEL', nombre: 'Zelle del negocio', tipo: 'Zelle', mon: 'usd', num: 'correo •••@ejemplo.com', titular: 'Socio en EE. UU.', saldo: 1389.56, ultimo: 'Ayer 20:15' },
+    { id: 'ZEL', nombre: 'Zelle del negocio', tipo: 'Zelle', mon: 'usd', num: 'correo •••@ejemplo.com', titular: 'Socio en EE. UU.', saldo: 1462.30, ultimo: 'Ayer 20:15' },
     { id: 'BIN', nombre: 'Binance del negocio', tipo: 'Binance', mon: 'usdt', num: 'alias «Restaurante»', titular: 'Alejandro', saldo: 2310.44, ultimo: 'Ayer 21:48' },
     { id: 'BOV', nombre: 'Bóveda de dólares', tipo: 'Efectivo', mon: 'usd', num: '—', titular: 'Custodia: Jose', saldo: 12560, ultimo: 'Sáb 3 oct' },
     { id: 'CCH', nombre: 'Caja chica', tipo: 'Efectivo', mon: 'usd', num: '—', titular: 'Custodia: Jose', saldo: 86.50, ultimo: 'Sáb 3 oct' },
@@ -78,19 +78,19 @@ window.DB = (() => {
 
   /* ---------- caja del día ---------- */
   const CAJA = [
-    { id: 'c1', hora: '13:42', banco: 'Banesco', tipo: 'Pago móvil', monto: 36346.94, mon: 'bs', estado: 'por_confirmar', motivo: 'La foto dice «en proceso»', ref: '000012344417', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
-    { id: 'c2', hora: '13:38', banco: 'Mercantil', tipo: 'Pago móvil', monto: 4668.86, mon: 'bs', estado: 'por_confirmar', motivo: 'Mercantil no manda correo', ref: '27691724', cajera: 'Caja 2', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
-    { id: 'c3', hora: '13:31', banco: 'Zelle', tipo: 'Zelle', monto: 41.37, mon: 'usd', estado: 'confirmado', motivo: '', ref: 'M. Pérez', cajera: 'Caja 1', fuente: 'Correo del banco', destino: 'ZEL', cerro: 'El bot' },
-    { id: 'c4', hora: '13:20', banco: 'Binance', tipo: 'USDT', monto: 21.15, mon: 'usdt', estado: 'confirmado', motivo: '', ref: 'Orden 4402…118', cajera: 'Caja 2', fuente: 'Correo de Binance', destino: 'BIN', cerro: 'El bot' },
-    { id: 'c5', hora: '13:05', banco: 'Venezolano', tipo: 'Pago móvil', monto: 22506.05, mon: 'bs', estado: 'confirmado', motivo: '', ref: '007428489', cajera: 'Caja 1', fuente: 'Reacción ✅ de Jose', destino: 'BVCA', cerro: 'Jose', doble: true },
-    { id: 'c6', hora: '12:54', banco: 'Provincial', tipo: 'Transferencia', monto: 18436.16, mon: 'bs', estado: 'avisado', motivo: 'Pasaron 20 min sin correo: el bot avisó al grupo', ref: '000012374', cajera: 'Caja 2', fuente: 'Captura', destino: 'BVCJ', cerro: '—' },
-    { id: 'c7', hora: '12:51', banco: 'Mercantil', tipo: 'Pago móvil', monto: 40421.22, mon: 'bs', estado: 'por_confirmar', motivo: 'Mercantil no manda correo', ref: '58817230', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
+    { id: 'c1', hora: '13:42', banco: 'Banesco', tipo: 'Pago móvil', monto: 33812.47, mon: 'bs', estado: 'por_confirmar', motivo: 'La foto dice «en proceso»', ref: '000012871903', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
+    { id: 'c2', hora: '13:38', banco: 'Mercantil', tipo: 'Pago móvil', monto: 5214.30, mon: 'bs', estado: 'por_confirmar', motivo: 'Mercantil no manda correo', ref: '31580946', cajera: 'Caja 2', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
+    { id: 'c3', hora: '13:31', banco: 'Zelle', tipo: 'Zelle', monto: 46.20, mon: 'usd', estado: 'confirmado', motivo: '', ref: 'M. Pérez', cajera: 'Caja 1', fuente: 'Correo del banco', destino: 'ZEL', cerro: 'El bot' },
+    { id: 'c4', hora: '13:20', banco: 'Binance', tipo: 'USDT', monto: 24.60, mon: 'usdt', estado: 'confirmado', motivo: '', ref: 'Orden 4402…118', cajera: 'Caja 2', fuente: 'Correo de Binance', destino: 'BIN', cerro: 'El bot' },
+    { id: 'c5', hora: '13:05', banco: 'Venezolano', tipo: 'Pago móvil', monto: 19877.35, mon: 'bs', estado: 'confirmado', motivo: '', ref: '007431562', cajera: 'Caja 1', fuente: 'Reacción ✅ de Jose', destino: 'BVCA', cerro: 'Jose', doble: true },
+    { id: 'c6', hora: '12:54', banco: 'Provincial', tipo: 'Transferencia', monto: 17290.84, mon: 'bs', estado: 'avisado', motivo: 'Pasaron 20 min sin correo: el bot avisó al grupo', ref: '000015208', cajera: 'Caja 2', fuente: 'Captura', destino: 'BVCJ', cerro: '—' },
+    { id: 'c7', hora: '12:51', banco: 'Mercantil', tipo: 'Pago móvil', monto: 38604.15, mon: 'bs', estado: 'por_confirmar', motivo: 'Mercantil no manda correo', ref: '58817230', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
     { id: 'c8', hora: '12:47', banco: 'BNC', tipo: 'Pago móvil', monto: 9120.00, mon: 'bs', estado: 'confirmado', motivo: '', ref: '0918273', cajera: 'Caja 2', fuente: 'Leído de la captura', destino: 'BNC', cerro: 'El bot' },
-    { id: 'c9', hora: '12:40', banco: 'Banesco', tipo: 'Pago móvil', monto: 31350.32, mon: 'bs', estado: 'por_confirmar', motivo: 'No se leyó la referencia: el bot pidió los datos a la cajera', ref: '¿?', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
+    { id: 'c9', hora: '12:40', banco: 'Banesco', tipo: 'Pago móvil', monto: 28945.66, mon: 'bs', estado: 'por_confirmar', motivo: 'No se leyó la referencia: el bot pidió los datos a la cajera', ref: '¿?', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
     { id: 'c10', hora: '12:22', banco: 'Venezolano', tipo: 'Pago móvil', monto: 15890.40, mon: 'bs', estado: 'confirmado', motivo: '', ref: '007412203', cajera: 'Caja 2', fuente: 'Correo del banco', destino: 'BVCA', cerro: 'El bot' },
     { id: 'c11', hora: '12:10', banco: 'Bancaribe', tipo: 'Pago móvil', monto: 12240.00, mon: 'bs', estado: 'confirmado', motivo: '', ref: '33019287', cajera: 'Caja 1', fuente: 'Correo del banco', destino: 'BVCA', cerro: 'El bot' },
     { id: 'c13', hora: '11:40', banco: '—', tipo: 'Foto', monto: 0, mon: 'bs', estado: 'descartado', motivo: 'No era un comprobante: foto del fondo de caja', ref: '—', cajera: 'Caja 1', fuente: 'Captura', destino: '—', cerro: 'El bot (lectura 3 de 3)' },
-    { id: 'c12', hora: '11:58', banco: 'Zelle', tipo: 'Zelle', monto: 53.68, mon: 'usd', estado: 'confirmado', motivo: '', ref: 'A. Rojas', cajera: 'Caja 2', fuente: 'Correo del banco', destino: 'ZEL', cerro: 'El bot' },
+    { id: 'c12', hora: '11:58', banco: 'Zelle', tipo: 'Zelle', monto: 58.90, mon: 'usd', estado: 'confirmado', motivo: '', ref: 'A. Rojas', cajera: 'Caja 2', fuente: 'Correo del banco', destino: 'ZEL', cerro: 'El bot' },
   ];
 
   /* ---------- pendientes ---------- */
@@ -357,8 +357,8 @@ window.DB = (() => {
 
   /* ---------- análisis ---------- */
   const SEMANAS = [
-    ['13 jul', 31800], ['20 jul', 32950], ['27 jul', 31200], ['3 ago', 30480], ['10 ago', 29900], ['17 ago', 28650],
-    ['24 ago', 27980], ['31 ago', 28410], ['7 sep', 29120], ['14 sep', 28300], ['21 sep', 29760], ['28 sep', 30940],
+    ['13 jul', 20670], ['20 jul', 21420], ['27 jul', 20280], ['3 ago', 19810], ['10 ago', 19440], ['17 ago', 18620],
+    ['24 ago', 18190], ['31 ago', 18470], ['7 sep', 18930], ['14 sep', 18400], ['21 sep', 19340], ['28 sep', 20110],
   ];
   const PLATOS = [
     ['Parrilla para dos', 412, 18.9], ['Arepa armada', 980, 14.2], ['Cachapa con queso', 640, 8.8], ['Pabellón', 355, 7.1],
@@ -378,7 +378,7 @@ window.DB = (() => {
     { id: 'ev4', fecha: 'Jue 24 dic', nombre: 'Nochebuena (cerramos a las 17:00)', efecto: 'Pedidos de hallacas y pernil por encargo', tipo: 'feriado' },
   ];
   const DECISIONES = [
-    { id: 'md1', nombre: 'Rebaja de precios del 18 de agosto', desde: '18 ago', estado: 'medida', resultado: 'Pedidos por día −8 % frente a julio. La rebaja no trajo más gente.', tono: 'alerta' },
+    { id: 'md1', nombre: 'Rebaja de precios del 18 de agosto', desde: '18 ago', estado: 'medida', resultado: 'Pedidos por día −7 % frente a julio. La rebaja no trajo más gente.', tono: 'alerta' },
     { id: 'md2', nombre: 'Combo almuerzo ejecutivo', desde: '21 sep', estado: 'midiendo', resultado: 'Faltan 2 semanas para tener el «después» completo (4 semanas).', tono: 'info' },
   ];
 

@@ -197,7 +197,7 @@
     const c = D.CUENTAS.find(x => x.id === id);
     return { titulo: c.nombre, sub: esc(c.tipo) + ' · ' + esc(c.num), mod: 'bancos', obj: c, registro: 'Cuenta ' + c.id,
       bloques: [{ filas: [{ l: 'Etiqueta', v: `<span class="acct" data-c="${c.id}">${c.id}</span>` }, { l: 'Saldo', v: dinero(c.saldo, c.mon) }, { l: 'Titular o custodio', v: esc(c.titular), campo: { k: 'titular', tipo: 'texto' } }, { l: 'Número', v: esc(c.num), campo: { k: 'num', tipo: 'texto', sensible: true } }, { l: 'Último movimiento', v: esc(c.ultimo) }] },
-        { titulo: 'Últimos movimientos', tiempo: [['Hoy', 'Pago móvil recibido · Bs 22.506,05', 'ok'], ['Hoy', 'Pago a Carnes La Pradera · Bs 1.126.816,00', ''], ['Ayer', 'Traspaso a BVCE · Bs 50.000,00', '']] }] };
+        { titulo: 'Últimos movimientos', tiempo: [['Hoy', 'Pago móvil recibido · Bs 19.877,35', 'ok'], ['Hoy', 'Pago a Carnes La Pradera · Bs 1.126.816,00', ''], ['Ayer', 'Traspaso a BVCE · Bs 50.000,00', '']] }] };
   };
   FICHAS.conciliacion = id => {
     const c = D.CONCILIACION.find(x => x.id === id);

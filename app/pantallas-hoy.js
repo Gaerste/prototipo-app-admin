@@ -11,13 +11,13 @@
   function parte() {
     return `<article class="parte" aria-label="El parte de la mañana">
       <div class="hoja-cab"><p class="etq">El parte de hoy · llegó a las 7:00 por WhatsApp</p><button class="enlace" data-abrir="kpi:parte">Cómo se calcula</button></div>
-      <p class="parte-texto">Ayer domingo se vendieron <b>$ 4.612</b>, el 117 % de lo que hacía falta. Hoy la meta es <b>$ 3.950</b> para cubrir los costos del día.</p>
+      <p class="parte-texto">Ayer domingo se vendieron <b>$ 3.006</b>, el 117 % de lo que hacía falta. Hoy la meta es <b>$ 2.573</b> para cubrir los costos del día.</p>
       <div class="medidor" role="img" aria-label="Ayer se vendió 117 % de la meta"><span style="width:100%"></span><i style="left:85.6%"></i></div>
-      <p class="leyenda"><span>Ayer, $ 4.612</span><span>La raya marca la meta</span></p>
+      <p class="leyenda"><span>Ayer, $ 3.006</span><span>La raya marca la meta</span></p>
       <div class="mini-cifras">
-        <button data-abrir="kpi:semana"><small>Domingo pasado</small><b>$ 4.380</b><small class="up">+5 %</small></button>
-        <button data-abrir="kpi:anio"><small>Mismo domingo de 2025</small><b>$ 4.155</b><small class="up">+11 %</small></button>
-        <button data-abrir="kpi:ticket"><small>Pedidos · ticket</small><b>251 · $ 18,40</b><small class="down">−2 % ticket</small></button>
+        <button data-abrir="kpi:semana"><small>Domingo pasado</small><b>$ 2.863</b><small class="up">+5 %</small></button>
+        <button data-abrir="kpi:anio"><small>Mismo domingo de 2025</small><b>$ 2.708</b><small class="up">+11 %</small></button>
+        <button data-abrir="kpi:ticket"><small>Pedidos · ticket</small><b>163 · $ 18,40</b><small class="down">−2 % ticket</small></button>
       </div>
     </article>`;
   }
@@ -220,10 +220,10 @@
   /* ---------- cifras del parte (cada una se abre) ---------- */
   FICHAS.kpi = id => {
     const k = {
-      parte: { t: 'Cómo se calcula la meta del día', b: [{ filas: [{ l: 'Costos fijos del mes', v: '$ 58.400' }, { l: 'Días de venta del mes', v: '30' }, { l: 'Lo variable (comida, comisiones)', v: '50,7 % de la venta' }, { l: 'Meta del día', v: '<b>$ 3.950</b>' }] }, { html: '<p class="muted">Meta = costos fijos ÷ días ÷ (1 − lo variable). Los costos fijos los escribe Alejandro en Parámetros. Las ventas salen del resumen diario del POS de Odoo.</p>' }] },
-      semana: { t: 'Ayer contra el domingo pasado', b: [{ filas: [{ l: 'Domingo 4 oct', v: '$ 4.612' }, { l: 'Domingo 27 sep', v: '$ 4.380' }, { l: 'Diferencia', v: '<span class="up">+$ 232 (+5 %)</span>' }] }] },
-      anio: { t: 'Ayer contra el mismo domingo de 2025', b: [{ filas: [{ l: 'Domingo 4 oct 2026', v: '$ 4.612' }, { l: 'Domingo 5 oct 2025', v: '$ 4.155' }, { l: 'Diferencia', v: '<span class="up">+$ 457 (+11 %)</span>' }] }, { html: '<p class="muted">Se compara el mismo día de la semana. La historia de Odoo arranca el 1 de octubre de 2025.</p>' }] },
-      ticket: { t: 'Pedidos y ticket promedio', b: [{ filas: [{ l: 'Pedidos ayer', v: '251 (+8 % contra el domingo pasado)' }, { l: 'Ticket promedio', v: '$ 18,40' }, { l: 'Ticket del domingo pasado', v: '$ 18,77' }] }] },
+      parte: { t: 'Cómo se calcula la meta del día', b: [{ filas: [{ l: 'Costos fijos del mes', v: '$ 38.060' }, { l: 'Días de venta del mes', v: '30' }, { l: 'Lo variable (comida, comisiones)', v: '50,7 % de la venta' }, { l: 'Meta del día', v: '<b>$ 2.573</b>' }] }, { html: '<p class="muted">Meta = costos fijos ÷ días ÷ (1 − lo variable). Los costos fijos los escribe Alejandro en Parámetros. Las ventas salen del resumen diario del POS de Odoo.</p>' }] },
+      semana: { t: 'Ayer contra el domingo pasado', b: [{ filas: [{ l: 'Domingo 4 oct', v: '$ 3.006' }, { l: 'Domingo 27 sep', v: '$ 2.863' }, { l: 'Diferencia', v: '<span class="up">+$ 143 (+5 %)</span>' }] }] },
+      anio: { t: 'Ayer contra el mismo domingo de 2025', b: [{ filas: [{ l: 'Domingo 4 oct 2026', v: '$ 3.006' }, { l: 'Domingo 5 oct 2025', v: '$ 2.708' }, { l: 'Diferencia', v: '<span class="up">+$ 298 (+11 %)</span>' }] }, { html: '<p class="muted">Se compara el mismo día de la semana. La historia de Odoo arranca el 1 de octubre de 2025.</p>' }] },
+      ticket: { t: 'Pedidos y ticket promedio', b: [{ filas: [{ l: 'Pedidos ayer', v: '163 (+7 % contra el domingo pasado)' }, { l: 'Ticket promedio', v: '$ 18,40' }, { l: 'Ticket del domingo pasado', v: '$ 18,77' }] }] },
     }[id];
     return { titulo: k.t, sub: 'Parte de la mañana', mod: 'analisis', bloques: k.b, acciones: [{ txt: 'Ver en Análisis', acc: 'ir-a', arg: 'analisis', icono: 'analisis' }] };
   };

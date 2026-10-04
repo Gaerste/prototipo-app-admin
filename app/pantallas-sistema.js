@@ -109,7 +109,7 @@
   ACC.revocar = id => A.pedirCodigo('Revocar la clave de ' + D.SERVICIO.find(x => x.id === id).nombre + '. Dejará de funcionar al instante.').then(() => A.aviso('Clave revocada. (Simulado)')).catch(() => {});
 
   /* =============== PARÁMETROS =============== */
-  const P = D.PARAMS; P.costosFijos = 58400;
+  const P = D.PARAMS; P.costosFijos = 38060;
   const filaParam = (clave, etq, valor, extra = '') => `<li><button class="fila" data-abrir="param:${clave}"><span class="medio"><b>${esc(etq)}</b><small>${extra}</small></span><span class="fin"><span class="monto" style="font-weight:500;text-align:right">${valor}</span>${ic('derecha', 's chev')}</span></button></li>`;
   function negocio() {
     const N = P.negocio; const s = P.sedes[0];

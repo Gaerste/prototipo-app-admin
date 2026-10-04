@@ -33,12 +33,12 @@
         const ult = D.SEMANAS[D.SEMANAS.length - 1][1], ant = D.SEMANAS[D.SEMANAS.length - 2][1];
         cuerpo = `<div class="cifras">
             ${A.cifra({ etq: 'Esta semana (28 sep – 4 oct)', valor: dinero(ult, 'usd', 0), sub: `<span class="up">+${fmt((ult / ant - 1) * 100, 1)} %</span> contra la anterior`, abrir: 'semana:11' })}
-            ${A.cifra({ etq: 'Pedidos por día', valor: '109', sub: '<span class="down">−8 %</span> contra julio', abrir: 'decision:md1' })}
-            ${A.cifra({ etq: 'Ticket promedio', valor: '€ 34,40', sub: 'julio: € 37,70' })}
-            ${A.cifra({ etq: 'Punto de equilibrio semanal', valor: dinero(27650, 'usd', 0), sub: 'esta semana se cubrió', tono: '' })}
+            ${A.cifra({ etq: 'Pedidos por día', valor: '96', sub: '<span class="down">−7 %</span> contra julio', abrir: 'decision:md1' })}
+            ${A.cifra({ etq: 'Ticket promedio', valor: '€ 29,80', sub: 'julio: € 31,90' })}
+            ${A.cifra({ etq: 'Punto de equilibrio semanal', valor: dinero(18010, 'usd', 0), sub: 'esta semana se cubrió', tono: '' })}
           </div>
           <article class="hoja"><div class="hoja-cab"><h2>Venta por semana</h2><span class="muted">Últimas 12 semanas · la raya es el punto de equilibrio</span></div>
-            ${A.barrasSVG({ datos: D.SEMANAS.map(s => [s[0], s[1], dinero(s[1], 'usd', 0)]), meta: 27650, etiquetaY: v => '$' + fmt(v / 1000, 0) + 'k', resaltar: D.SEMANAS.length - 1, id: 'sem' })}</article>
+            ${A.barrasSVG({ datos: D.SEMANAS.map(s => [s[0], s[1], dinero(s[1], 'usd', 0)]), meta: 18010, etiquetaY: v => v ? '$' + fmt(v / 1000, 0) + 'k' : '$0', resaltar: D.SEMANAS.length - 1, id: 'sem' })}</article>
           <div class="rejilla"><div class="c6"><article class="hoja"><h2>Lo que más se vende</h2>${A.tabla({ cols: [{ t: 'Plato', cls: 'p' }, { t: 'Unidades', cls: 'r x' }, { t: '% de la venta', cls: 'r' }], filas: D.PLATOS.map(p => ({ celdas: [`<b>${esc(p[0])}</b>`, fmt(p[1], 0), fmt(p[2], 1) + ' %'] })) })}</article></div>
           <div class="c6"><article class="hoja"><h2>${ic('calendario')}Fechas que vienen</h2><ul class="lista">${D.EVENTOS.map(e => `<li><div class="fila"><span class="lead ${e.tipo === 'feriado' ? 'aviso' : 'info'}">${ic('calendario')}</span><span class="medio"><b>${esc(e.nombre)}</b><small>${esc(e.fecha)} · ${esc(e.efecto)}</small></span><span></span></div></li>`).join('')}</ul></article></div></div>`;
       }
@@ -63,7 +63,7 @@
   FICHAS.decision = id => {
     const d = D.DECISIONES.find(x => x.id === id);
     return { titulo: d.nombre, sub: 'Desde el ' + esc(d.desde), mod: 'analisis', obj: d, tags: [[A.estadoTag(d.estado).replace(/<[^>]+>/g, ''), d.estado === 'medida' ? 'ok' : 'info']],
-      bloques: [{ filas: d.id === 'md1' ? [{ l: 'Pedidos por día, antes', v: '117 → 109' }, { l: 'Pedidos por día, después', v: '−8 % (rango −13 % a −2 %)' }, { l: 'Venta de carta por día', v: '−16 %' }, { l: 'Ticket', v: '€ 37,70 → € 34,40' }] : [{ l: 'Antes (4 semanas)', v: 'Medido' }, { l: 'Después', v: '2 de 4 semanas' }] }, { html: `<p>${esc(d.resultado)}</p><p class="muted">Pesa también el contexto del país (luz, terremoto de junio, tasa). La app lo anota al lado, no lo esconde.</p>` }] };
+      bloques: [{ filas: d.id === 'md1' ? [{ l: 'Pedidos por día, antes', v: '103' }, { l: 'Pedidos por día, después', v: '96 (−7 %, rango −12 % a −1 %)' }, { l: 'Venta de carta por día', v: '−11 %' }, { l: 'Ticket', v: '€ 31,90 → € 29,80' }] : [{ l: 'Antes (4 semanas)', v: 'Medido' }, { l: 'Después', v: '2 de 4 semanas' }] }, { html: `<p>${esc(d.resultado)}</p><p class="muted">Pesa también el contexto del país (luz, terremoto de junio, tasa). La app lo anota al lado, no lo esconde.</p>` }] };
   };
-  FICHAS.semana = i => { const s = D.SEMANAS[i]; return { titulo: 'Semana del ' + s[0], sub: 'Ventas', mod: 'analisis', bloques: [{ filas: [{ l: 'Venta', v: dinero(s[1], 'usd', 0) }, { l: 'Semana anterior', v: dinero(D.SEMANAS[i - 1][1], 'usd', 0) }, { l: 'Punto de equilibrio', v: dinero(27650, 'usd', 0) }] }] }; };
+  FICHAS.semana = i => { const s = D.SEMANAS[i]; return { titulo: 'Semana del ' + s[0], sub: 'Ventas', mod: 'analisis', bloques: [{ filas: [{ l: 'Venta', v: dinero(s[1], 'usd', 0) }, { l: 'Semana anterior', v: dinero(D.SEMANAS[i - 1][1], 'usd', 0) }, { l: 'Punto de equilibrio', v: dinero(18010, 'usd', 0) }] }] }; };
 })();
