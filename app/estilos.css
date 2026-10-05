@@ -8,9 +8,10 @@
   --hoja-3: #E6EBE3;
   --tinta: #18202E;       /* tinta azul-negra */
   --tinta-2: #4D5767;
-  --tinta-3: #6F7884;
+  --tinta-3: #5F6874;     /* el gris claro, un poco más oscuro: se lee sobre el papel y al sol */
   --raya: #D3DBD0;        /* las rayas del libro */
   --raya-2: #E3E8E0;
+  --borde-campo: #7F8A7C; /* solo los bordes de campos, listas y botones secundarios: se ven aunque haya sol (las rayas del libro siguen igual) */
   --boligrafo: #2142B8;   /* acento: bolígrafo azul */
   --boligrafo-2: #1A3592;
   --sobre-tinta: #FFFFFF;
@@ -44,6 +45,7 @@
   --f-texto: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --f-dato: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --side-w: 252px;
+  --toque: 0px;           /* alto mínimo de lo que se toca: 44 px en pantallas táctiles y en el formato teléfono; en la computadora no cambia nada */
   --ficha-w: 500px;
 }
 @media (prefers-color-scheme: dark) {
@@ -52,7 +54,7 @@
     --raya: #2A333E; --raya-2: #222A34; --boligrafo: #93AAFF; --boligrafo-2: #B5C4FF; --sobre-tinta: #10151B;
     --ok: #62C98E; --ok-fondo: #15301F; --aviso: #E6A64A; --aviso-fondo: #33270F; --alerta: #FF8C7D; --alerta-fondo: #3A1B18; --info-fondo: #1A2441;
     --lila: #BBA6FF; --lila-fondo: #272043; --regla: #5E3437; --sello: #A3AEFF; --sello-rojo: #FF8C7D; --mezcla: screen; --wa-fondo: #0B141A; --wa-burbuja: #134D3A; --t1-fondo: #E4E9EF; --t1-texto: #141A24; --t1-borde: #E4E9EF; --t2-fondo: #4E5968; --t2-texto: #FFFFFF; --t3-fondo: #06090D; --t3-texto: #E4E9EF;
-    --res-bvca: #85700F; --res-bvce: #2E7A40; --res-bvcj: #2C5C9B; --res-bnc: #5B49A0; --res-efe: #7A5330;
+    --res-bvca: #705D0C; --res-bvce: #276A37; --res-bvcj: #264F86; --res-bnc: #4E3E8B; --res-efe: #694629; --borde-campo: #64707F;
     --foto: #0A0D11; --billete: #6F8C6C; --marco: #2A333E; --velo: rgb(0 0 0 / .55);
     --sombra: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .45); --sombra-ficha: -12px 0 40px rgb(0 0 0 / .5);
     color-scheme: dark;
@@ -63,7 +65,7 @@
   --raya: #2A333E; --raya-2: #222A34; --boligrafo: #93AAFF; --boligrafo-2: #B5C4FF; --sobre-tinta: #10151B;
   --ok: #62C98E; --ok-fondo: #15301F; --aviso: #E6A64A; --aviso-fondo: #33270F; --alerta: #FF8C7D; --alerta-fondo: #3A1B18; --info-fondo: #1A2441;
   --lila: #BBA6FF; --lila-fondo: #272043; --regla: #5E3437; --sello: #A3AEFF; --sello-rojo: #FF8C7D; --mezcla: screen; --wa-fondo: #0B141A; --wa-burbuja: #134D3A; --t1-fondo: #E4E9EF; --t1-texto: #141A24; --t1-borde: #E4E9EF; --t2-fondo: #4E5968; --t2-texto: #FFFFFF; --t3-fondo: #06090D; --t3-texto: #E4E9EF;
-  --res-bvca: #85700F; --res-bvce: #2E7A40; --res-bvcj: #2C5C9B; --res-bnc: #5B49A0; --res-efe: #7A5330;
+  --res-bvca: #705D0C; --res-bvce: #276A37; --res-bvcj: #264F86; --res-bnc: #4E3E8B; --res-efe: #694629; --borde-campo: #64707F;
   --foto: #0A0D11; --billete: #6F8C6C; --marco: #2A333E; --velo: rgb(0 0 0 / .55);
   --sombra: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px rgb(0 0 0 / .45); --sombra-ficha: -12px 0 40px rgb(0 0 0 / .5);
   color-scheme: dark;
@@ -81,6 +83,8 @@ button { cursor: pointer; }
 a { color: var(--boligrafo); }
 :focus-visible { outline: 2px solid var(--boligrafo); outline-offset: 2px; border-radius: 6px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* la página recibe el teclado solo cuando lo que se tocó ya no está: lo dice una raya a la izquierda, como la sección elegida del menú */
+#main:focus-visible { outline: none; box-shadow: inset 3px 0 0 var(--boligrafo); border-radius: 0; }
 .ic { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .ic.s { width: 16px; height: 16px; }
 .ic.xs { width: 14px; height: 14px; }
@@ -130,7 +134,12 @@ a { color: var(--boligrafo); }
 .side-nav { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px 12px; display: flex; flex-direction: column; gap: 14px; }
 .nav-grupo { display: flex; flex-direction: column; gap: 1px; }
 .nav-grupo > p { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-3); padding: 4px 10px 4px; }
-.nav-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font-size: 14px; font-weight: 500; color: var(--tinta-2); position: relative; }
+.nav-item { display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--toque); padding: 7px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font-size: 14px; font-weight: 500; color: var(--tinta-2); position: relative; }
+/* a un grupo que le quedó una sola cosa se le quita el título: va en un bloque propio, después de una raya, separado como los demás grupos */
+.nav-sueltos::before { content: ""; display: block; border-top: 1px solid var(--raya); margin: 0 10px 6px; }
+/* la caja del buscador va arriba de la lista solo en «Más» del teléfono */
+.side-buscar { display: none; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--borde-campo); background: var(--hoja); color: var(--tinta-2); font-size: 15px; text-align: left; }
+.side-buscar .ic { color: var(--tinta-3); }
 .nav-item:hover { background: var(--hoja-2); color: var(--tinta); }
 .nav-item[aria-current="page"] { background: var(--hoja-3); color: var(--tinta); font-weight: 600; }
 .nav-item[aria-current="page"]::before { content: ""; position: absolute; left: -10px; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--boligrafo); }
@@ -153,14 +162,15 @@ a { color: var(--boligrafo); }
 .top-titulo small { font-size: 12px; color: var(--tinta-2); }
 .top-titulo b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .buscar { margin-left: auto; position: relative; width: min(360px, 40%); }
-.buscar input { width: 100%; height: 38px; padding: 0 12px 0 36px; border-radius: 10px; border: 1px solid var(--raya); background: var(--hoja); font-size: 14px; }
+.buscar input { width: 100%; height: 38px; padding: 0 12px 0 36px; border-radius: 10px; border: 1px solid var(--borde-campo); background: var(--hoja); font-size: 14px; cursor: pointer; }
 .buscar .ic { position: absolute; left: 11px; top: 11px; color: var(--tinta-3); }
 .buscar kbd { position: absolute; right: 9px; top: 9px; font-family: var(--f-dato); font-size: 11px; color: var(--tinta-3); border: 1px solid var(--raya); border-radius: 5px; padding: 1px 5px; background: var(--hoja-2); }
 .top-acc { display: flex; align-items: center; gap: 8px; }
-.redondo { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--hoja); border: 1px solid var(--raya); }
+.redondo { position: relative; width: max(40px, var(--toque)); height: max(40px, var(--toque)); flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--hoja); border: 1px solid var(--borde-campo); }
 .redondo .cuenta { position: absolute; top: -3px; right: -3px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: var(--alerta); color: var(--sobre-tinta); font-size: 11px; font-weight: 600; display: grid; place-items: center; }
 .top .solo-tel { display: none; }
 .lectura-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--hoja-3); color: var(--tinta-2); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.lectura-chip .corto { display: none; }
 
 .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .pagina { padding: 24px 28px 48px; max-width: 1320px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
@@ -180,6 +190,7 @@ a { color: var(--boligrafo); }
   .side-nav { padding: 4px 6px 10px; gap: 8px; }
   .nav-grupo > p { display: none; }
   .nav-grupo + .nav-grupo { border-top: 1px solid var(--raya); padding-top: 8px; }
+  .nav-sueltos::before { display: none; }
   .nav-item { flex-direction: column; gap: 3px; padding: 7px 2px; font-size: 10.5px; text-align: center; line-height: 1.2; }
   .nav-item[aria-current="page"]::before { left: -6px; }
   .nav-item .cuenta { position: absolute; top: 2px; right: 8px; margin: 0; min-width: 17px; height: 17px; font-size: 10px; }
@@ -196,9 +207,13 @@ a { color: var(--boligrafo); }
   .app.menu-abierto .side { display: flex; position: absolute; inset: 0 auto 0 0; width: min(86%, 320px); z-index: 45; box-shadow: var(--sombra-ficha); }
   .app.menu-abierto .side .marca div, .app.menu-abierto .side .sede { display: block; }
   .app.menu-abierto .side .sede { display: flex; }
+  /* «Más»: la caja del buscador arriba de la lista, y fuera lo que ya está en las pestañas de abajo */
+  .app.menu-abierto .side-buscar { display: flex; }
+  .app.menu-abierto .side .en-tabs { display: none; }
   .app.menu-abierto .side-top { align-items: stretch; padding: 18px 16px 10px; }
   .app.menu-abierto .nav-grupo > p { display: block; }
   .app.menu-abierto .nav-grupo + .nav-grupo { border-top: 0; padding-top: 0; }
+  .app.menu-abierto .nav-sueltos::before { display: block; }
   .app.menu-abierto .nav-item { flex-direction: row; font-size: 14.5px; text-align: left; padding: 9px 10px; gap: 10px; }
   .app.menu-abierto .nav-item .cuenta { position: static; margin-left: auto; }
   .app.menu-abierto .yo { justify-content: flex-start; }
@@ -208,7 +223,8 @@ a { color: var(--boligrafo); }
   .top .solo-tel { display: grid; }
   .top-acc { margin-left: auto; }
   .buscar { display: none; }
-  .top .lectura-chip span { display: none; }
+  .top .lectura-chip .largo { display: none; }
+  .top .lectura-chip .corto { display: inline; }
   .pagina { padding: 16px 16px 28px; gap: 16px; }
   .tabs { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--hoja); border-top: 1px solid var(--raya); padding: 4px 4px calc(6px + env(safe-area-inset-bottom, 0px)); }
   .tab { display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; padding: 6px 0; font-size: 11px; font-weight: 500; color: var(--tinta-3); border-radius: 10px; position: relative; }
@@ -230,7 +246,7 @@ h3 { font-size: 14.5px; font-weight: 600; }
 .desc { color: var(--tinta-2); font-size: 14px; max-width: 72ch; }
 .sec { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 .sec h2 { font-size: 17px; }
-.etq { font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-3); }
+.etq { font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-3); }
 .hoja { background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .hoja.plana { padding: 0; overflow: hidden; }
 .hoja-cab { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -268,38 +284,50 @@ h3 { font-size: 14.5px; font-weight: 600; }
 .tag.info { color: var(--boligrafo); background: var(--info-fondo); }
 .tag.lila { color: var(--lila); background: var(--lila-fondo); }
 
-.enlace { background: none; border: 0; padding: 0; color: var(--boligrafo); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 4px; }
+.enlace { position: relative; background: none; border: 0; padding: 0; color: var(--boligrafo); font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 4px; }
+/* en pantallas táctiles la zona que se toca de un enlace («Ver los 13») llega a 44 px de alto sin cambiar cómo se ve */
+.enlace::after { content: ""; position: absolute; inset: min(0px, calc((20px - var(--toque)) / 2)) min(0px, calc((20px - var(--toque)) / 4)); }
 .enlace:hover { text-decoration: underline; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 16px; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid transparent; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: max(42px, var(--toque)); padding: 0 16px; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid transparent; white-space: nowrap; }
 .btn.pri { background: var(--tinta); color: var(--sobre-tinta); }
 .btn.pri:hover { background: var(--boligrafo-2); }
-.btn.sec { background: var(--hoja); border-color: var(--raya); color: var(--tinta); }
+.btn.sec { background: var(--hoja); border-color: var(--borde-campo); color: var(--tinta); }
+/* un botón que abre una pestaña (Configuración en Fiscal) queda marcado cuando es la elegida */
+.btn.sec[aria-current="true"] { background: var(--hoja-3); border-color: var(--tinta); }
 .btn.sec:hover { background: var(--hoja-2); }
 .btn.peligro { background: var(--alerta-fondo); border-color: var(--alerta); color: var(--alerta); }
 .btn.ghost { background: none; color: var(--tinta-2); }
 .btn.ghost:hover { background: var(--hoja-2); color: var(--tinta); }
-.btn.chico { min-height: 34px; padding: 0 12px; font-size: 13px; border-radius: 9px; }
+.btn.chico { min-height: max(34px, var(--toque)); padding: 0 12px; font-size: 13px; border-radius: 9px; }
 .btn[disabled], .btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 .btn.full { width: 100%; }
 .btn.bloq { background: var(--hoja-2); border: 1px dashed var(--raya); color: var(--tinta-3); }
+/* el candado, el borde punteado y la letra gris ya dicen que está bloqueado: sin opacidad de más, para que se pueda leer */
+.btn.bloq[aria-disabled="true"] { opacity: 1; }
 
-.seg { display: inline-flex; gap: 3px; padding: 3px; border-radius: 8px; background: var(--hoja-2); border: 1px solid var(--raya); max-width: 100%; overflow-x: auto; }
-.seg button { flex: none; min-height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 600; color: var(--tinta-2); white-space: nowrap; }
+.seg { position: relative; display: inline-flex; gap: 3px; padding: 3px; border-radius: 8px; background: var(--hoja-2); border: 1px solid var(--borde-campo); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.seg::-webkit-scrollbar, .subnav::-webkit-scrollbar { display: none; }
+.seg button { flex: none; min-height: max(32px, var(--toque)); padding: 0 12px; border: 0; border-radius: 8px; background: none; font-size: 13.5px; font-weight: 600; color: var(--tinta-2); white-space: nowrap; }
 .seg button[aria-pressed="true"] { background: var(--hoja); color: var(--tinta); box-shadow: 0 1px 3px rgb(24 32 46 / .12); }
 .seg button .n { font-variant-numeric: tabular-nums; color: var(--tinta-3); margin-left: 4px; font-weight: 500; }
+/* en vez de opciones que no responden, una línea fija que dice lo único que se puede (el retiro de Luis) */
+.para-fijo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 10px 12px; border-radius: 8px; background: var(--hoja-2); border: 1px solid var(--raya); font-size: 14px; }
+.para-fijo b { font-weight: 600; }
 
 .filtros { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .filtro-buscar { position: relative; flex: 1 1 200px; max-width: 320px; }
-.filtro-buscar input { width: 100%; height: 38px; padding: 0 12px 0 34px; border-radius: 10px; border: 1px solid var(--raya); background: var(--hoja); font-size: 14px; }
-.filtro-buscar .ic { position: absolute; left: 10px; top: 11px; color: var(--tinta-3); }
+.filtro-buscar input { width: 100%; height: max(38px, var(--toque)); padding: 0 12px 0 34px; border-radius: 10px; border: 1px solid var(--borde-campo); background: var(--hoja); font-size: 14px; }
+.filtro-buscar .ic { position: absolute; left: 10px; top: 50%; margin-top: -8px; color: var(--tinta-3); }
 
 /* sub-secciones de un módulo (Fiscal, Parámetros, Proveedores…) */
-.subnav { display: flex; gap: 4px; border-bottom: 1px solid var(--raya); overflow-x: auto; scrollbar-width: none; margin-top: -4px; }
-.subnav button { flex: none; border: 0; background: none; padding: 10px 12px; font-size: 14px; font-weight: 600; color: var(--tinta-2); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.subnav { position: relative; display: flex; gap: 4px; border-bottom: 1px solid var(--raya); overflow-x: auto; scrollbar-width: none; margin-top: -4px; }
+.subnav button { flex: none; min-height: var(--toque); border: 0; background: none; padding: 10px 12px; font-size: 14px; font-weight: 600; color: var(--tinta-2); border-bottom: 2px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .subnav button:hover { color: var(--tinta); }
 .subnav button[aria-current="true"] { color: var(--tinta); border-bottom-color: var(--boligrafo); }
 .subnav .cuenta { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--alerta-fondo); color: var(--alerta); font-size: 11px; display: grid; place-items: center; }
 .subnav .cuenta.gris { background: var(--hoja-3); color: var(--tinta-2); }
+.subnav .sn-corto { display: none; }
+@container app (min-width: 1100px) { .subnav .sn-largo { display: none; } .subnav .sn-corto { display: inline; } }
 
 /* cifras: cada una se abre */
 .cifras { display: flex; flex-wrap: wrap; gap: 1px; background: var(--raya); border: 1px solid var(--raya); border-radius: 8px; overflow: hidden; }
@@ -319,7 +347,7 @@ button.cifra::after { content: ""; position: absolute; right: 14px; top: 16px; w
 /* tablas: en la computadora son tablas; en el teléfono, fichas */
 .tabla-env { overflow-x: auto; }
 .t { width: 100%; border-collapse: collapse; font-size: 14px; }
-.t th { text-align: left; font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-3); padding: 10px 12px; background: var(--hoja-2); border-bottom: 1px solid var(--raya); white-space: nowrap; }
+.t th { text-align: left; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); padding: 10px 12px; background: var(--hoja-2); border-bottom: 1px solid var(--raya); white-space: nowrap; }
 .t td { padding: 11px 12px; border-bottom: 1px solid var(--raya-2); vertical-align: middle; }
 .t tbody tr:last-child td { border-bottom: 0; }
 .t tbody tr { cursor: pointer; }
@@ -332,7 +360,8 @@ button.cifra::after { content: ""; position: absolute; right: 14px; top: 16px; w
 .t tr.anulada td { color: var(--tinta-3); text-decoration: line-through; }
 .t tr.anulada td .tag { text-decoration: none; }
 .t tfoot td { padding: 11px 12px; border-top: 1px solid var(--tinta); border-bottom: 3px double var(--tinta); font-weight: 600; background: var(--hoja-2); }
-.t th.r, .t td.r { border-left: 1px solid var(--regla); }
+/* la raya roja del libro va solo en las columnas de plata (clase plata); la clase r solo alinea a la derecha */
+.t th.plata, .t td.plata { border-left: 1px solid var(--regla); }
 .kv > div.total { border-top: 1px solid var(--tinta); border-bottom: 3px double var(--tinta); }
 .kv > div.total + div { border-top: 0; }
 @container app (max-width: 719px) {
@@ -357,6 +386,11 @@ button.cifra::after { content: ""; position: absolute; right: 14px; top: 16px; w
 .lista > li + li { border-top: 1px solid var(--raya-2); }
 .fila { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: none; border: 0; text-align: left; }
 button.fila:hover { background: var(--hoja-2); }
+.fila:not(:has(> .lead)) { grid-template-columns: minmax(0, 1fr) fit-content(55%); }
+/* el valor de un parámetro puede ser un texto largo: se parte en renglones a la derecha (los montos siguen enteros) */
+.fila .valor { min-width: 0; text-align: right; font-weight: 500; }
+/* reglas con su interruptor (o, a quien solo mira, «Encendido»/«Apagado»): el texto a lo ancho y el estado al final */
+.lista-reglas .fila { grid-template-columns: minmax(0, 1fr) auto; }
 .lead { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--hoja-2); color: var(--tinta-2); }
 .lead.aviso { background: var(--aviso-fondo); color: var(--aviso); }
 .lead.alerta { background: var(--alerta-fondo); color: var(--alerta); }
@@ -386,7 +420,8 @@ button.fila:hover { background: var(--hoja-2); }
 .kv > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--raya-2); font-size: 14px; min-height: 38px; }
 .kv > div:first-child { border-top: 0; }
 .kv dt { color: var(--tinta-2); min-width: 0; }
-.kv dd { font-weight: 600; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 8px; text-align: right; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+/* el valor no se encoge por debajo de su pedazo más largo (un monto entero): si no cabe, el nombre de la izquierda baja de renglón */
+.kv dd { font-weight: 600; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 8px; text-align: right; flex-wrap: wrap; justify-content: flex-end; }
 .kv dd.largo { font-weight: 500; }
 .kv .cambio { font-size: 12px; color: var(--aviso); font-weight: 600; }
 .kv .cambio s { color: var(--tinta-3); font-weight: 500; }
@@ -396,7 +431,7 @@ button.fila:hover { background: var(--hoja-2); }
 .barra { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; font-size: 13.5px; }
 .barra b { font-variant-numeric: tabular-nums; }
 /* una barra que se abre (termómetro de la comida): se ve igual que las demás */
-button.barra { width: 100%; border: 0; background: none; padding: 0; margin: 0; text-align: left; color: inherit; font: inherit; font-size: 13.5px; cursor: pointer; border-radius: 4px; }
+button.barra { width: 100%; min-height: max(20px, var(--toque)); align-content: center; border: 0; background: none; padding: 0; margin: 0; text-align: left; color: inherit; font: inherit; font-size: 13.5px; cursor: pointer; border-radius: 4px; }
 button.barra:hover > span:first-child, button.barra:focus-visible > span:first-child { text-decoration: underline; }
 .pista { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--hoja-2); border: 1px solid var(--raya); overflow: hidden; }
 .pista > span { display: block; height: 100%; border-radius: 4px; background: var(--tinta-2); }
@@ -424,16 +459,22 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .campos { display: grid; gap: 12px 14px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .campo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .campo > span { font-size: 13px; font-weight: 600; color: var(--tinta-2); display: flex; align-items: center; gap: 6px; }
-.campo input, .campo select, .campo textarea { width: 100%; min-width: 0; min-height: 42px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--raya); background: var(--hoja); font-size: 15px; }
+.campo input, .campo select, .campo textarea { width: 100%; min-width: 0; min-height: max(42px, var(--toque)); padding: 8px 12px; border-radius: 10px; border: 1px solid var(--borde-campo); background: var(--hoja); font-size: 15px; }
 .campo textarea { min-height: 72px; resize: vertical; line-height: 1.4; }
 .campo input:focus, .campo select:focus, .campo textarea:focus { outline: 2px solid var(--boligrafo); outline-offset: 0; border-color: transparent; }
 .campo input[readonly] { background: var(--hoja-2); color: var(--tinta-2); }
 .campo .ayuda { font-size: 12.5px; color: var(--tinta-3); }
+/* una respuesta que se guarda sola al salir del cuadro: «Guardado 14:05» al lado */
+.guardado { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--tinta-2); }
+/* «¿Borrar tu respuesta? Borrar · Dejarla»: una respuesta que quedó vacía no se borra sola · los enlaces con su alto de verdad (sin zona invisible sobre el cuadro) */
+.guardado[data-borrar] { color: var(--aviso); flex-wrap: wrap; gap: 4px 14px; }
+.guardado .enlace { min-height: var(--toque); }
+.guardado .enlace::after { content: none; }
 .campo.error input, .campo.error textarea, .campo.error select { border-color: var(--alerta); }
 .campo.error .ayuda { color: var(--alerta); }
 .campo.ancho { grid-column: 1 / -1; }
-.interruptor { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
-.interruptor input { appearance: none; width: 38px; height: 22px; border-radius: 8px; background: var(--hoja-3); border: 1px solid var(--raya); position: relative; margin: 0; flex: none; cursor: pointer; transition: background .2s; }
+.interruptor { display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque); font-size: 14px; cursor: pointer; }
+.interruptor input { appearance: none; width: 38px; height: 22px; border-radius: 8px; background: var(--hoja-3); border: 1px solid var(--borde-campo); position: relative; margin: 0; flex: none; cursor: pointer; transition: background .2s; }
 .interruptor input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--hoja); box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: transform .2s; }
 .interruptor input:checked { background: var(--ok); border-color: var(--ok); }
 .interruptor input:checked::after { transform: translateX(16px); }
@@ -442,11 +483,15 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .soltar .ic { width: 26px; height: 26px; color: var(--tinta-2); }
 .soltar span { display: flex; flex-direction: column; font-size: 13px; color: var(--tinta-2); }
 .soltar b { color: var(--tinta); font-size: 14px; }
-.soltar.bloq { cursor: not-allowed; opacity: .55; }
+/* cerrado: como un botón con candado (borde punteado y letra gris, sin opacidad de más, para que se lea) */
+button.soltar { width: 100%; text-align: left; font: inherit; color: inherit; }
+.soltar.bloq { cursor: not-allowed; border-color: var(--raya); color: var(--tinta-3); }
+.soltar.bloq b { color: var(--tinta-2); }
+.soltar.bloq .ic { color: var(--tinta-3); }
 
 /* archivos adjuntos */
 .adjuntos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.adjunto { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--raya); border-radius: 10px; background: var(--hoja-2); font-size: 13px; text-align: left; min-width: 0; }
+.adjunto { display: flex; align-items: center; gap: 8px; min-height: var(--toque); padding: 8px 10px; border: 1px solid var(--borde-campo); border-radius: 10px; background: var(--hoja-2); font-size: 13px; text-align: left; min-width: 0; }
 .adjunto span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .adjunto .ic { color: var(--tinta-2); }
 
@@ -461,9 +506,19 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .ficha-cuerpo { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 16px; }
 .ficha-pie { flex: none; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--hoja); border-top: 1px solid var(--raya); }
 .ficha-pie .izq { margin-right: auto; }
+/* lo que deshace (Anular, Anular reserva) va aparte, a la izquierda · debajo, una nota corta y los enlaces de un paso más */
+.pie-izq { display: flex; flex-wrap: wrap; gap: 8px; margin-right: auto; }
+.pie-bajo { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 16px; font-size: 13px; }
+.pie-nota { display: inline-flex; align-items: center; gap: 6px; color: var(--tinta-2); margin-right: auto; }
+.pie-bajo .enlace { min-height: max(32px, var(--toque)); }
+/* ahí el enlace ya tiene su alto de verdad: sin la zona invisible, que se montaba sobre el botón de arriba y le robaba el toque */
+.pie-bajo .enlace::after { content: none; }
+/* en fila con botones, igual: alto de verdad y sin zona invisible (la zona queda solo para los enlaces sueltos) */
+.filtros .enlace { min-height: var(--toque); }
+.filtros .enlace::after { content: none; }
 .ficha .bloque { background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .ficha .bloque > h3 { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
-.cerrar { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--hoja-2); }
+.cerrar { width: max(38px, var(--toque)); height: max(38px, var(--toque)); flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; background: var(--hoja-2); }
 .cerrar:hover { background: var(--hoja-3); }
 @keyframes entrar { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
 @keyframes subir { from { transform: translateY(40px); opacity: .4; } to { transform: none; opacity: 1; } }
@@ -480,10 +535,36 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .modal { width: min(440px, 100%); max-height: 100%; overflow: auto; background: var(--hoja); border-radius: 16px; box-shadow: var(--sombra); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 .modal h2 { font-family: var(--f-display); font-size: 22px; display: block; }
 .modal-acc { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-.codigo { display: flex; gap: 8px; justify-content: center; }
-.codigo input { width: 46px; height: 56px; text-align: center; font-family: var(--f-dato); font-size: 24px; font-weight: 500; border-radius: 10px; border: 2px solid var(--raya); background: var(--hoja); }
-.codigo input:focus { border-color: var(--tinta); outline: none; }
-@container app (max-width: 380px) { .codigo input { width: 40px; height: 50px; } }
+/* «Guardar el cambio»: una línea por campo tocado, con su aviso debajo si el número quedó 10, 100 o 1.000 veces distinto */
+.cambios { display: flex; flex-direction: column; gap: 8px; color: var(--tinta); font-size: 14px; }
+.cambios li { display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+.cambios .nota { font-size: 13px; }
+/* el código: una sola casilla (la que pega, la que rellena el teléfono) dibujada encima de 6 cajitas que muestran los números */
+.codigo { position: relative; display: flex; justify-content: center; width: fit-content; max-width: 100%; margin-inline: auto; }
+.codigo-cajas { display: flex; gap: 8px; }
+.codigo-cajas i { position: relative; width: 46px; height: 56px; display: grid; place-items: center; font-style: normal; font-family: var(--f-dato); font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; border-radius: 10px; border: 2px solid var(--borde-campo); background: var(--hoja); color: var(--tinta); }
+.codigo-cajas i.llena { border-color: var(--tinta-3); }
+/* el foco se ve en la cajita que toca escribir, con su raya de escribir */
+.codigo:focus-within .codigo-cajas i.activa { border-color: var(--tinta); outline: 2px solid var(--boligrafo); outline-offset: 2px; }
+.codigo:focus-within .codigo-cajas i.activa:empty::after { content: ""; width: 2px; height: 26px; border-radius: 1px; background: var(--tinta); animation: parpadeo 1.1s steps(2, start) infinite; }
+@keyframes parpadeo { to { visibility: hidden; } }
+.codigo-in { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 10px; background: transparent; color: transparent; -webkit-text-fill-color: transparent; caret-color: transparent; font-size: 16px; letter-spacing: 1em; outline: none; cursor: text; }
+.codigo-in:focus-visible { outline: none; }
+.codigo-in::selection { background: transparent; }
+.codigo-in:-webkit-autofill, .codigo-in:-webkit-autofill:focus { -webkit-text-fill-color: transparent; transition: background-color 600000s 0s; }
+.codigo-msg { text-align: center; }
+.codigo-msg.error { color: var(--alerta); font-weight: 600; }
+@container app (max-width: 380px) { .codigo-cajas { gap: 6px; } .codigo-cajas i { width: 40px; height: 50px; font-size: 22px; } }
+/* qué se firma: qué, a quién y cuánto, arriba de las cajitas; con el lote, una línea por cuenta con su resaltador */
+.firma-que { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 8px; background: var(--hoja-2); border: 1px solid var(--raya); border-left: 3px solid var(--tinta); }
+.firma-t { font-size: 15px; font-weight: 600; line-height: 1.35; color: var(--tinta); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.firma-det { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13.5px; line-height: 1.4; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.firma-cta { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-weight: 600; color: var(--tinta); }
+.modal.firma { gap: 12px; }
+.modal.firma h2 { font-size: 20px; }
+/* en el teléfono la ventana del código y la que abre con un campo para escribir (el motivo, pasar, invitar…) suben arriba:
+   así el campo y el botón quedan por encima del teclado */
+@container app (max-width: 719px) { .modal-env.de-firma, .modal-env.de-teclado { place-items: start center; padding-top: 14px; } }
 
 .toast { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 70; background: var(--tinta); color: var(--sobre-tinta); padding: 10px 16px; border-radius: 10px; font-size: 13.5px; box-shadow: var(--sombra); max-width: calc(100% - 32px); display: flex; gap: 8px; align-items: center; animation: aparecer .15s ease-out; }
 @container app (min-width: 720px) { .toast { bottom: 24px; } }
@@ -499,7 +580,7 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .login-paso { display: flex; flex-direction: column; gap: 14px; }
 .login-pie { font-size: 12.5px; color: var(--tinta-3); }
 .quien { display: grid; gap: 8px; }
-.quien button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--raya); border-radius: 8px; background: var(--hoja); text-align: left; }
+.quien button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--borde-campo); border-radius: 8px; background: var(--hoja); text-align: left; }
 .quien button:hover { border-color: var(--tinta-3); }
 .quien button > span:last-child { display: flex; flex-direction: column; min-width: 0; }
 .quien small { color: var(--tinta-2); font-size: 12.5px; }
@@ -519,13 +600,17 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .parte-texto { font-family: var(--f-display); font-weight: 500; font-size: 23px; line-height: 1.32; text-wrap: pretty; max-width: 46ch; }
 .parte-texto b { font-weight: 700; white-space: nowrap; }
 .leyenda { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--tinta-2); margin-top: -6px; }
-.mini-cifras { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--raya); padding-top: 12px; }
+.mini-cifras { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 12px; border-top: 1px solid var(--raya); padding-top: 12px; }
 .mini-cifras > button { padding: 0 10px; border: 0; border-left: 1px solid var(--raya); background: none; display: flex; flex-direction: column; gap: 2px; text-align: left; border-radius: 0; }
 .mini-cifras > button:first-child { padding-left: 0; border-left: 0; }
 .mini-cifras > button:hover b { color: var(--boligrafo); }
 .mini-cifras small:first-child { font-size: 12px; color: var(--tinta-2); }
 .mini-cifras b { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 16px; }
 .mini-cifras .up, .mini-cifras .down { font-size: 12px; font-weight: 600; }
+@container app (max-width: 719px) {
+  .mini-cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mini-cifras > button:nth-child(odd) { padding-left: 0; border-left: 0; }
+}
 .up { color: var(--ok); }
 .down { color: var(--alerta); }
 .salud { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--tinta-2); padding: 0 2px; background: none; border: 0; text-align: left; }
@@ -539,16 +624,37 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .recibo .aro.ok { background: var(--ok-fondo); color: var(--ok); }
 .recibo strong { font-size: 14.5px; }
 .recibo .grande { font-size: 23px; }
+/* la referencia en letra de máquina, con su botón de copiar (la zona que se toca llega a 44 px) */
+.ref { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.copiar { position: relative; width: 32px; height: 32px; flex: none; display: grid; place-items: center; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--tinta-3); }
+.copiar::after { content: ""; position: absolute; inset: -6px; }
+.copiar:hover { background: var(--hoja-3); color: var(--tinta); border-color: var(--raya); }
+.copiar.grande { width: 44px; height: 44px; }
+.copiar.grande::after { display: none; }
+.en-tel { display: none; }
+@container app (max-width: 719px) { .en-tel { display: inline; } }
+/* en un iPad parado la tabla de Caja cabe sin moverse de lado: celdas un poco más juntas, y el estado y el botón de copiar pasan al renglón de abajo si hace falta */
+@container app (min-width: 720px) and (max-width: 999px) {
+  #t-caja th, #t-caja td { padding-left: 8px; padding-right: 8px; }
+  #t-caja td.e .tag { white-space: normal; }
+  #t-caja .ref { flex-wrap: wrap; gap: 0 4px; }
+}
 
 /* ---------- pagos de los lunes ---------- */
 .pagos-rej { display: grid; gap: 18px; }
-.libro-pagos { background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; }  /* no usar «libro»: es el libro de reservas */
+/* la lista se acomoda según su propio ancho, no el de la app: filas apiladas si mide menos de 600 px (iPad acostado, con el cuadre al lado) */
+.libro-pagos { container: pagos / inline-size; background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; }
+/* el menú «Sale de» abierto queda por encima de lo que sigue (en la nómina, la segunda lista) */
+.libro-pagos:has(.menu) { position: relative; z-index: 6; }
 .lcab { display: none; }
 .lfila { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "prov monto" "vence estado" "cuenta cuenta"; gap: 6px 10px; align-items: center; padding: 13px 14px; }
 .lfila + .lfila { border-top: 1px solid var(--raya-2); }
 .c-prov { grid-area: prov; min-width: 0; display: flex; flex-direction: column; gap: 1px; align-items: flex-start; }
 .c-prov small { color: var(--tinta-2); font-size: 12.5px; }
-.c-prov button { border: 0; background: none; padding: 0; text-align: left; }
+.c-prov button { position: relative; border: 0; background: none; padding: 0; text-align: left; }
+/* el nombre (proveedor o persona) abre la línea: su zona llega a 44 px de alto en el teléfono sin cambiar cómo se ve
+   (debajo solo está la línea «Hoy / Vencida», que no se toca) */
+.c-prov button::after { content: ""; position: absolute; inset: min(0px, calc((22px - var(--toque)) / 2)) 0; }
 .c-vence { grid-area: vence; font-size: 13px; color: var(--tinta-2); }
 .c-vence.tarde { color: var(--alerta); font-weight: 600; }
 .c-monto { grid-area: monto; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -556,13 +662,15 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .c-estado { grid-area: estado; justify-self: end; }
 .subraya { font-weight: 600; padding: 0 4px; margin-left: -4px; border-radius: 3px 7px 4px 6px; background-image: linear-gradient(100deg, transparent 0, var(--m, transparent) 6px, var(--m, transparent) calc(100% - 5px), transparent 100%); background-repeat: no-repeat; background-position: 0 60%; background-size: 0% 74%; transition: background-size .5s cubic-bezier(.25, .7, .3, 1); }
 .lfila.pagada .subraya { background-size: 100% 74%; }
-.cta-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px 0 6px; border-radius: 9px; border: 1px solid var(--raya); background: var(--hoja); font-size: 13px; font-weight: 600; }
+.cta-btn { display: inline-flex; align-items: center; gap: 6px; min-height: max(34px, var(--toque)); padding: 0 10px 0 6px; border-radius: 9px; border: 1px solid var(--borde-campo); background: var(--hoja); font-size: 13px; font-weight: 600; }
 .cta-btn.vacia { border-style: dashed; color: var(--tinta-2); padding-left: 12px; }
 .cta-btn .ic { color: var(--tinta-3); }
 .cta-btn:disabled { cursor: not-allowed; opacity: .6; }
-.alerta-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px; border-radius: 9px; border: 1px solid var(--alerta); background: var(--alerta-fondo); color: var(--alerta); font-size: 13px; font-weight: 600; }
-.menu { position: absolute; z-index: 15; top: calc(100% + 6px); left: 0; width: 250px; padding: 6px; background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; box-shadow: var(--sombra); display: flex; flex-direction: column; gap: 2px; }
-.menu button { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font-size: 13.5px; }
+/* la cuenta de una línea aprobada: se ve con su candado y, al tocarla, dice cómo se cambia */
+.cta-btn.bloq { border-style: dashed; background: var(--hoja-2); color: var(--tinta-3); padding-left: 8px; cursor: not-allowed; }
+.alerta-btn { display: inline-flex; align-items: center; gap: 6px; min-height: max(34px, var(--toque)); padding: 0 10px; border-radius: 9px; border: 1px solid var(--alerta); background: var(--alerta-fondo); color: var(--alerta); font-size: 13px; font-weight: 600; }
+.menu { position: absolute; z-index: 15; top: calc(100% + 6px); left: 0; width: 250px; padding: 6px; background: var(--hoja); border: 1px solid var(--borde-campo); border-radius: 8px; box-shadow: var(--sombra); display: flex; flex-direction: column; gap: 2px; }
+.menu button { display: flex; align-items: center; gap: 10px; min-height: var(--toque); padding: 9px 10px; border: 0; border-radius: 8px; background: none; text-align: left; font-size: 13.5px; }
 .menu button:hover, .menu button:focus-visible { background: var(--hoja-2); }
 .menu small { color: var(--tinta-2); }
 .menu .quitar { color: var(--alerta); font-weight: 600; border-top: 1px solid var(--raya); border-radius: 0 0 8px 8px; margin-top: 4px; }
@@ -579,13 +687,17 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
   .pagos-rej { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
   .lado { position: sticky; top: 0; }
 }
-/* las columnas de la lista solo cuando le caben al lado del panel (en el iPad la lista va en fichas, como en el teléfono) */
-@container app (min-width: 1320px) {
-  .lcab, .lfila { grid-template-columns: minmax(0, 1fr) 96px 112px 140px 122px; grid-template-areas: none; gap: 10px; padding: 10px 16px; }
-  .lcab { display: grid; font-size: 11.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-3); background: var(--hoja-2); border-bottom: 1px solid var(--raya); border-radius: 8px 14px 0 0; }
+/* las 5 columnas solo cuando la lista mide 600 px o más: el proveedor nunca baja de 100 px, y el botón de la cuenta
+   y el estado se parten en dos renglones antes que montarse sobre la columna de al lado */
+@container pagos (min-width: 600px) {
+  .lcab, .lfila { grid-template-columns: minmax(100px, 1fr) 84px 100px 132px minmax(112px, .5fr); grid-template-areas: none; gap: 8px; padding: 10px 12px 10px 14px; }
+  .lcab { display: grid; font-size: 12.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); background: var(--hoja-2); border-bottom: 1px solid var(--raya); border-radius: 8px 8px 0 0; }
   .lcab .r { text-align: right; }
   .lcab + .lfila { border-top: 0; }
-  .c-prov, .c-vence, .c-monto, .c-cuenta, .c-estado { grid-area: auto; }
+  .c-prov, .c-vence, .c-monto, .c-cuenta, .c-estado { grid-area: auto; min-width: 0; }
+  .c-cuenta .cta-btn, .c-cuenta .alerta-btn { max-width: 100%; white-space: normal; text-align: left; line-height: 1.2; padding-block: 4px; }
+  .c-estado { text-align: right; }
+  .c-estado .tag { white-space: normal; text-align: left; }
   .menu { left: auto; right: 0; }
 }
 
@@ -625,8 +737,11 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .hecho-caja { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border-radius: 8px; background: var(--ok-fondo); color: var(--ok); font-size: 14px; font-weight: 500; }
 
 /* ---------- tasas y gráficos ---------- */
-.spark { width: 100%; height: auto; display: block; color: var(--boligrafo); overflow: visible; }
-.spark text, .graf text { fill: var(--tinta-3); font-size: 10.5px; font-family: var(--f-texto); }
+/* la línea estira a lo ancho con su alto fijo; las etiquetas van debajo, como texto, al mismo tamaño en el teléfono y en la computadora */
+.spark-env { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.spark { width: 100%; height: 54px; display: block; color: var(--boligrafo); overflow: visible; }
+.leyenda.spark-ley { margin-top: 0; font-size: 12px; color: var(--tinta-3); flex-wrap: wrap; }
+.graf text { fill: var(--tinta-3); font-size: 10.5px; font-family: var(--f-texto); }
 .graf { width: 100%; height: auto; display: block; overflow: visible; }
 .graf .eje { stroke: var(--raya); }
 .graf .rej { stroke: var(--raya-2); }
@@ -637,7 +752,7 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .graf .meta { stroke: var(--tinta); stroke-dasharray: 4 3; }
 .calc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
 .calc label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--tinta-2); min-width: 0; }
-.calc input, .calc select, .calc output { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--raya); background: var(--hoja); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; width: 100%; min-width: 0; }
+.calc input, .calc select, .calc output { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--borde-campo); background: var(--hoja); font-weight: 600; font-size: 16px; font-variant-numeric: tabular-nums; width: 100%; min-width: 0; }
 .calc input { border: 2px solid var(--tinta); }
 .calc output { display: flex; align-items: center; background: var(--hoja-2); }
 .calc .ancho { grid-column: 1 / -1; }
@@ -645,13 +760,15 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 
 /* ---------- fiscal: calendario ---------- */
 .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--raya); border-radius: 8px; overflow: hidden; background: var(--hoja); }
-.cal > .dsem { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); padding: 7px 8px; background: var(--hoja-2); border-bottom: 1px solid var(--raya); }
+.cal > .dsem { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--tinta-3); padding: 7px 8px; background: var(--hoja-2); border-bottom: 1px solid var(--raya); }
 .cal > .dia { min-height: 92px; padding: 6px 6px 8px; border-top: 1px solid var(--raya-2); border-left: 1px solid var(--raya-2); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .cal > .dia:nth-child(7n + 1) { border-left: 0; }
 .cal > .dia.fuera { background: var(--hoja-2); }
 .cal > .dia.fuera .n { color: var(--tinta-3); }
 .cal > .dia.hoy .n { background: var(--tinta); color: var(--sobre-tinta); }
-.cal .n { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; }
+.cal .n { position: relative; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; }
+/* el número del día se toca con el dedo: su zona llega a 44 px en pantallas táctiles */
+.cal.agenda .n::after { content: ""; position: absolute; inset: min(0px, calc((24px - var(--toque)) / 2)); }
 .cal .ev { display: block; width: 100%; border: 0; text-align: left; font-size: 11.5px; font-weight: 600; line-height: 1.25; padding: 3px 5px; border-radius: 5px; background: var(--hoja-3); color: var(--tinta-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal .ev.ok { background: var(--ok-fondo); color: var(--ok); }
 .cal .ev.aviso { background: var(--aviso-fondo); color: var(--aviso); }
@@ -660,6 +777,12 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 @container app (max-width: 719px) {
   .cal > .dia { min-height: 56px; padding: 3px; }
   .cal .ev { font-size: 0; height: 6px; padding: 0; border-radius: 3px; }
+  /* en el teléfono los puntos son para ver: los vencimientos se tocan en la lista de abajo y, en el calendario de reservas,
+     se toca el día entero (abre todo lo que tiene) */
+  .cal .ev { pointer-events: none; }
+  .cal.agenda > .dia { position: relative; }
+  .cal.agenda .n { position: static; }
+  .cal.agenda .n::after { inset: 0; }
 }
 
 /* pasos del flujo (preparada → revisada → declarada → pagada) */
@@ -676,9 +799,12 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 /* matriz de permisos */
 .matriz { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
 .matriz th, .matriz td { padding: 8px 10px; border-bottom: 1px solid var(--raya-2); text-align: center; }
-.matriz thead th { position: sticky; top: 0; background: var(--hoja-2); font-size: 12px; font-weight: 600; color: var(--tinta-2); border-bottom: 1px solid var(--raya); white-space: nowrap; }
+.matriz thead th { position: sticky; top: 0; background: var(--hoja-2); font-size: 12.5px; font-weight: 600; color: var(--tinta-2); border-bottom: 1px solid var(--raya); white-space: nowrap; }
 .matriz th[scope="row"] { text-align: left; font-weight: 600; white-space: nowrap; background: var(--hoja); position: sticky; left: 0; }
-.matriz td button { border: 0; background: none; padding: 2px; border-radius: 6px; }
+.matriz td:has(> button) { padding: 0; }
+.matriz td button { display: flex; align-items: center; justify-content: center; width: 100%; min-height: max(38px, var(--toque)); border: 0; background: none; padding: 6px 10px; border-radius: 0; }
+.matriz td button:hover { background: var(--hoja-2); }
+.matriz td button:focus-visible { outline-offset: -2px; border-radius: 4px; }
 .perm { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 .perm.no { color: var(--tinta-3); }
 .perm.ver { background: var(--hoja-3); color: var(--tinta-2); }
@@ -691,14 +817,61 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .revision li + li { border-top: 1px solid var(--raya-2); }
 .revision small { display: block; color: var(--tinta-2); font-size: 12.5px; }
 
-/* atajo de teclado */
+/* el buscador: un panel en la computadora (⌘K o Ctrl K) y la pantalla completa en el teléfono (la lupa) */
 .buscador { position: absolute; inset: 0; z-index: 56; background: var(--velo); display: flex; justify-content: center; align-items: flex-start; padding: 70px 16px 16px; }
-.buscador-caja { width: min(560px, 100%); background: var(--hoja); border-radius: 8px; box-shadow: var(--sombra); overflow: hidden; display: flex; flex-direction: column; max-height: 70%; }
-.buscador-caja input { border: 0; border-bottom: 1px solid var(--raya); padding: 14px 16px; font-size: 16px; background: none; outline: none; }
-.buscador-res { overflow-y: auto; padding: 6px; }
-.buscador-res button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; background: none; border-radius: 8px; text-align: left; font-size: 14px; }
-.buscador-res button:hover, .buscador-res button.sel { background: var(--hoja-2); }
-.buscador-res small { color: var(--tinta-2); margin-left: auto; font-size: 12px; }
+.buscador-caja { width: min(600px, 100%); background: var(--hoja); border-radius: 8px; box-shadow: var(--sombra); overflow: hidden; display: flex; flex-direction: column; max-height: min(600px, 80%); }
+.buscador-cab { flex: none; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 16px; border-bottom: 1px solid var(--raya); }
+.buscador-cab > .ic { color: var(--tinta-3); }
+.buscador-cab input { flex: 1; min-width: 0; border: 0; padding: 15px 0; font-size: 16px; background: none; outline: none; }
+.bus-cerrar { display: none; flex: none; min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--boligrafo); font-weight: 600; font-size: 15px; }
+.buscador-res { overflow-y: auto; overscroll-behavior: contain; padding: 6px; display: flex; flex-direction: column; }
+.bus-op { display: flex; align-items: center; gap: 12px; width: 100%; min-height: var(--toque); padding: 9px 10px; border: 0; background: none; border-radius: 8px; text-align: left; font-size: 14px; color: var(--tinta); }
+.bus-op:hover, .bus-op.sel { background: var(--hoja-2); }
+/* el elegido con las flechas lleva su raya a la izquierda: no solo el color */
+.bus-op.sel { box-shadow: inset 3px 0 0 var(--boligrafo); }
+.bus-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.bus-op small { margin-left: auto; flex: 0 1 auto; min-width: 0; max-width: 45%; color: var(--tinta-2); font-size: 12px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bus-op mark { background: none; color: inherit; font-weight: 700; text-decoration: underline; text-decoration-color: var(--boligrafo); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.bus-grupo { padding: 10px 10px 4px; font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-3); }
+.bus-mas .bus-t { color: var(--boligrafo); font-weight: 600; }
+.bus-vacio { padding: 14px 10px; color: var(--tinta-2); font-size: 14px; }
+.buscador-pie { flex: none; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: flex-end; padding: 8px 14px; border-top: 1px solid var(--raya); font-size: 12px; color: var(--tinta-2); }
+.buscador-pie kbd, .buscar kbd { font-family: var(--f-dato); }
+.buscador-pie kbd { font-size: 11px; border: 1px solid var(--raya); border-radius: 4px; padding: 0 5px; background: var(--hoja-2); }
+@container app (max-width: 719px) {
+  .buscador { padding: 0; align-items: stretch; background: var(--papel); }
+  .buscador-caja { width: 100%; max-height: none; height: 100%; border-radius: 0; box-shadow: none; }
+  .bus-cerrar { display: block; }
+  .buscador-pie { display: none; }
+  .bus-op small { max-width: 40%; }
+}
+@media (pointer: coarse) { .buscador-pie { display: none; } .bus-cerrar { display: block; } }
+
+/* filas que se deslizan (pestañas y filtros) y tablas más anchas que la pantalla: la fila no esconde que hay más.
+   Un degradado del color del fondo con «›» en el borde, y «‹» del otro lado cuando ya se desplazó (se tocan para avanzar).
+   En las tablas, el degradado a la derecha y «Desliza →», hasta que se desliza. */
+.desliza { position: relative; min-width: 0; }
+.desliza.es-subnav { margin-top: -4px; --fondo-fila: var(--papel); }
+.desliza.es-subnav > .subnav { margin-top: 0; }
+.desliza.es-seg { display: inline-flex; max-width: 100%; vertical-align: middle; --fondo-fila: var(--hoja-2); }
+.desliza.es-tabla { --fondo-fila: var(--hoja); }
+.pdf .desliza.es-tabla { --fondo-fila: #FFFFFF; }
+.desliza-ant, .desliza-sig { position: absolute; top: 0; bottom: 0; z-index: 2; display: none; align-items: center; width: 44px; padding: 0 4px; border: 0; color: var(--tinta-2); font: 600 22px/1 var(--f-texto); cursor: pointer; }
+.desliza-sig { right: 0; justify-content: flex-end; background: linear-gradient(to left, var(--fondo-fila) 45%, transparent); }
+.desliza-ant { left: 0; justify-content: flex-start; background: linear-gradient(to right, var(--fondo-fila) 45%, transparent); }
+.desliza.hay-despues > .desliza-sig, .desliza.hay-antes > .desliza-ant { display: flex; }
+.desliza-ant:hover, .desliza-sig:hover { color: var(--tinta); }
+.desliza.es-subnav > .desliza-ant, .desliza.es-subnav > .desliza-sig { bottom: 1px; }
+.desliza.es-seg > .desliza-ant, .desliza.es-seg > .desliza-sig { top: 1px; bottom: 1px; width: 36px; }
+.desliza.es-seg > .desliza-sig { right: 1px; border-radius: 0 7px 7px 0; }
+.desliza.es-seg > .desliza-ant { left: 1px; border-radius: 7px 0 0 7px; }
+.desliza.es-tabla > .desliza-sig { width: 56px; pointer-events: none; align-items: flex-start; background: linear-gradient(to left, var(--fondo-fila) 10%, transparent); }
+.desliza-pista { position: absolute; top: 7px; right: 6px; pointer-events: auto; cursor: pointer; white-space: nowrap; padding: 2px 9px; border-radius: 999px; background: var(--tinta); color: var(--sobre-tinta); font-size: 12px; font-weight: 600; line-height: 1.5; box-shadow: var(--sombra); }
+.desliza.ya-deslizo .desliza-pista { display: none; }
+/* con el dedo dice «Desliza →»; con el ratón, «Más columnas →»; el formato teléfono siempre se toca con el dedo */
+.desliza-pista .con-raton { display: none; }
+@media (pointer: fine) { .desliza-pista .con-dedo { display: none; } .desliza-pista .con-raton { display: inline; } }
+@container app (max-width: 719px) { .desliza-pista .con-dedo { display: inline; } .desliza-pista .con-raton { display: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -708,6 +881,9 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .sello { --c: var(--sello); display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 12px 4px; border: 2.5px solid var(--c); outline: 1px solid var(--c); outline-offset: 2px; border-radius: 3px; color: var(--c); font-family: var(--f-display); font-weight: 700; font-size: 17px; letter-spacing: .14em; text-transform: uppercase; line-height: 1; transform: rotate(-6deg); opacity: .9; mix-blend-mode: var(--mezcla); -webkit-mask-image: var(--tinta-gastada); mask-image: var(--tinta-gastada); -webkit-mask-size: 180px 70px; mask-size: 180px 70px; pointer-events: none; user-select: none; white-space: nowrap; margin: 4px 8px 4px 2px; }
 .sello small { font-family: var(--f-dato); font-size: 9.5px; font-weight: 500; letter-spacing: .06em; }
 .sello.rojo { --c: var(--sello-rojo); }
+/* tachado: el sello que dejó de valer (el lote se reabrió para cambiarlo) sigue a la vista, más tenue y con una raya roja encima */
+.sello.tachado { position: relative; opacity: .5; }
+.sello.tachado::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px; background: var(--sello-rojo); transform: rotate(-7deg); }
 .sello.recien { animation: sellar .45s cubic-bezier(.2, .9, .3, 1.25) both; }
 @keyframes sellar { 0% { transform: scale(1.8) rotate(-16deg); opacity: 0; } 55% { transform: scale(.93) rotate(-5deg); opacity: .95; } 100% { transform: scale(1) rotate(-6deg); opacity: .9; } }
 .ficha-cab .tags { align-items: center; }
@@ -734,7 +910,7 @@ button.barra:hover > span:first-child, button.barra:focus-visible > span:first-c
 .t.horario td.hoy { background: var(--hoja-2); }
 .t.horario tbody tr:hover td.hoy { background: var(--hoja-2); }
 .t.horario tfoot td { font-variant-numeric: tabular-nums; }
-.turno { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 58px; height: 30px; padding: 0 8px; border-radius: 6px; border: 1px solid transparent; font-size: 12px; font-weight: 600; background: var(--hoja-3); color: var(--tinta-2); white-space: nowrap; }
+.turno { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 58px; min-height: max(30px, var(--toque)); padding: 0 8px; border-radius: 6px; border: 1px solid transparent; font-size: 12px; font-weight: 600; background: var(--hoja-3); color: var(--tinta-2); white-space: nowrap; }
 button.turno { cursor: pointer; }
 button.turno:hover { border-color: var(--tinta-3); }
 button.turno:focus-visible { outline: 2px solid var(--boligrafo); outline-offset: 1px; }
@@ -748,21 +924,23 @@ button.turno:focus-visible { outline: 2px solid var(--boligrafo); outline-offset
 
 /* diagrama del personal: octubre y noviembre en una sola pista por persona */
 .gantt { min-width: 640px; display: flex; flex-direction: column; }
-.gantt-fila { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; min-height: 36px; border-bottom: 1px solid var(--raya-2); }
+.gantt-fila { display: grid; grid-template-columns: 160px minmax(0, 1fr); align-items: center; min-height: max(36px, var(--toque)); border-bottom: 1px solid var(--raya-2); }
 .gantt-fila:last-child { border-bottom: 0; }
 .gantt-fila > b { font-size: 13.5px; font-weight: 600; padding-right: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gantt-fila > b .enlace { font-weight: 600; }
-.gantt-pista { position: relative; height: 36px; background-image: linear-gradient(to right, var(--raya-2) 1px, transparent 1px); background-size: calc(100% / 61 * 7) 100%; background-position: calc(100% / 61 * 4) 0; }
+.gantt-pista { position: relative; height: max(36px, var(--toque)); background-image: linear-gradient(to right, var(--raya-2) 1px, transparent 1px); background-size: calc(100% / 61 * 7) 100%; background-position: calc(100% / 61 * 4) 0; }
 .gantt-cab { min-height: 28px; border-bottom: 1px solid var(--raya); }
 .gantt-cab .gantt-pista { height: 28px; background: none; }
-.gantt-cab .gantt-pista > span { position: absolute; top: 0; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-2); }
+.gantt-cab .gantt-pista > span { position: absolute; top: 0; font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--tinta-2); }
 .gantt-cab .gantt-pista > i { position: absolute; bottom: 2px; font-style: normal; font-size: 10.5px; color: var(--tinta-3); transform: translateX(-50%); font-variant-numeric: tabular-nums; }
 .gantt-hoy { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--alerta); opacity: .75; }
-.gantt-barra { position: absolute; top: 8px; height: 20px; border: 0; border-radius: 4px; padding: 0 6px; font-size: 11px; font-weight: 600; line-height: 20px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-button.gantt-barra { cursor: pointer; }
+.gantt-barra { position: absolute; top: calc(50% - 10px); height: 20px; border: 0; border-radius: 4px; padding: 0 6px; font-size: 11px; font-weight: 600; line-height: 20px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* la barra que se abre se ve de 20 px, pero en el teléfono su zona llega a 44 px con un borde transparente arriba y abajo
+   (la fila también mide 44 px, así que no le roba el toque a la de al lado) */
+button.gantt-barra { --extra: calc((max(20px, var(--toque)) - 20px) / 2); cursor: pointer; top: calc(50% - 10px - var(--extra)); height: max(20px, var(--toque)); border-block: var(--extra) solid transparent; background-clip: padding-box; border-radius: 4px / calc(4px + var(--extra)); }
 
 
-.gantt-marca { position: absolute; top: 9px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; display: grid; place-items: center; z-index: 1; }
+.gantt-marca { position: absolute; top: calc(50% - 9px); width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; display: grid; place-items: center; z-index: 1; }
 .gantt-marca.cumple { background: var(--lila-fondo); color: var(--lila); border: 1px solid var(--lila); }
 .gantt-marca.contrato { background: var(--alerta-fondo); color: var(--alerta); border: 1px solid var(--alerta); }
 .gl { display: inline-block; width: 14px; height: 10px; border-radius: 3px; }
@@ -813,7 +991,21 @@ button.gantt-barra { cursor: pointer; }
 .wa-cab { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--tinta-2); }
 .wa-burbuja { align-self: flex-end; max-width: 92%; background: var(--wa-burbuja); color: var(--tinta); border-radius: 8px 0 8px 8px; padding: 8px 10px 5px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 1px 1px rgb(0 0 0 / .1); }
 .wa-burbuja b { font-weight: 600; }
-.wa-burbuja time { display: block; text-align: right; font-size: 11px; color: var(--tinta-3); margin-top: 2px; }
+.wa-burbuja time { display: flex; justify-content: flex-end; align-items: center; gap: 4px; font-size: 11px; color: var(--tinta-3); margin-top: 2px; white-space: nowrap; }
+.wa-burbuja .tics { letter-spacing: -.18em; padding-right: .18em; }
+/* la vista previa todavía no sale: borde punteado, sin hora ni palomitas */
+.wa-burbuja.previa { box-shadow: none; outline: 1.5px dashed var(--tinta-3); outline-offset: -1.5px; }
+.wa-previa { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--tinta-2); }
+/* lo que no salió: borde y hora en rojo, con su ícono y la palabra (no solo el color), y debajo cómo mandarlo a mano */
+.wa-burbuja.no_salio { box-shadow: inset 0 0 0 1.5px var(--alerta); }
+.wa-burbuja.no_salio time { color: var(--alerta); font-weight: 600; }
+.wa-burbuja.enviando time, .wa-burbuja.programado time { color: var(--tinta-2); font-weight: 600; }
+.wa-falla { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; background: var(--alerta-fondo); color: var(--alerta); font-size: 13.5px; }
+.wa-falla p { display: flex; gap: 8px; align-items: flex-start; }
+.wa-falla .ic { margin-top: 1px; }
+.wa-falla b { font-weight: 600; }
+.leyenda.wa-ley { justify-content: flex-start; flex-wrap: wrap; gap: 8px 16px; margin-top: 0; align-items: center; }
+.leyenda.wa-ley > span { display: inline-flex; align-items: center; gap: 6px; }
 .cita { padding: 10px 12px; border-left: 3px solid var(--raya); background: var(--hoja-2); border-radius: 0 6px 6px 0; font-size: 14px; }
 
 /* calendario con capas */
@@ -837,10 +1029,10 @@ button.ev:hover { filter: brightness(.96); }
 .evento-tarjeta { width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; }
 .evento-tarjeta:hover { border-color: var(--tinta-3); }
 .tareas { display: flex; flex-direction: column; gap: 2px; }
-.tareas button { display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px 2px; border: 0; background: none; text-align: left; font-size: 14px; color: var(--tinta); }
-.tareas button .ic { color: var(--tinta-3); margin-top: 2px; }
-.tareas li.hecha button { color: var(--tinta-3); text-decoration: line-through; }
-.tareas li.hecha button .ic { color: var(--ok); }
+.tareas button, .tareas .tarea { display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: var(--toque); padding: 6px 2px; border: 0; background: none; text-align: left; font-size: 14px; color: var(--tinta); }
+.tareas button .ic, .tareas .tarea .ic { color: var(--tinta-3); margin-top: 2px; }
+.tareas li.hecha button, .tareas li.hecha .tarea { color: var(--tinta-3); text-decoration: line-through; }
+.tareas li.hecha button .ic, .tareas li.hecha .tarea .ic { color: var(--ok); }
 .consumo-cifra b { font-family: var(--f-display); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .hoja.consumo .medidor { margin: 2px 0 4px; }
 tr.tenue td { color: var(--tinta-3); }
@@ -855,8 +1047,9 @@ tr.tenue td { color: var(--tinta-3); }
 .ponche { display: block; margin-top: 3px; font-family: var(--f-dato); font-size: 10.5px; line-height: 1; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
 .ponche.tarde, .reloj-rojo { color: var(--sello-rojo); }
 .reloj-rojo { font-family: var(--f-dato); font-size: 13px; }
-.gantt-barra.vac { background: var(--rayado); color: var(--tinta); box-shadow: inset 3px 0 0 var(--tinta-2); }
-.gantt-barra.rep { background: var(--rayado-lila); color: var(--lila); box-shadow: inset 3px 0 0 var(--lila); }
+/* el rayado se pinta solo dentro de la barra (padding-box): el borde transparente que agranda la zona del toque no se ve */
+.gantt-barra.vac { background: var(--rayado) padding-box; color: var(--tinta); box-shadow: inset 3px 0 0 var(--tinta-2); }
+.gantt-barra.rep { background: var(--rayado-lila) padding-box; color: var(--lila); box-shadow: inset 3px 0 0 var(--lila); }
 .gl.vac { background: var(--rayado); box-shadow: inset 3px 0 0 var(--tinta-2); }
 .gl.rep { background: var(--rayado-lila); box-shadow: inset 3px 0 0 var(--lila); }
 .punto.eventos { background: var(--tinta); }
@@ -867,11 +1060,12 @@ tr.tenue td { color: var(--tinta-3); }
 
 /* el libro de reservas: dos páginas abiertas, horas en el margen rojo */
 .libro-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-.libro { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; overflow: hidden; }
+/* su propio nombre (.libro-reservas): la regla de las dos páginas no toca otras listas, como la de los pagos del lunes */
+.libro-reservas { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--hoja); border: 1px solid var(--raya); border-radius: 8px; overflow: hidden; }
 .libro-pag { display: flex; flex-direction: column; min-width: 0; padding: 16px 18px 14px 0; }
 .libro-pag + .libro-pag { display: none; }
 @container app (min-width: 900px) {
-  .libro { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .libro-reservas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .libro-pag + .libro-pag { display: flex; box-shadow: inset 18px 0 16px -16px rgb(24 32 46 / .16); border-left: 1px solid var(--raya); }
 }
 .libro-cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 0 0 10px 78px; border-bottom: 2px solid var(--tinta); }
@@ -879,7 +1073,7 @@ tr.tenue td { color: var(--tinta-3); }
 .libro-cab span { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta-3); }
 .libro-pag.es-hoy .libro-cab span { color: var(--tinta); }
 .libro-lineas { list-style: none; margin: 0; padding: 0; background-image: linear-gradient(var(--regla), var(--regla)), linear-gradient(var(--regla), var(--regla)); background-size: 1px 100%, 1px 100%; background-repeat: no-repeat; background-position: 63px 0, 66px 0; }  /* doble raya roja de margen, como en los cuadernos */
-.libro-lineas > li { display: grid; grid-template-columns: 66px minmax(0, 1fr); min-height: 38px; border-bottom: 1px solid var(--raya-2); }
+.libro-lineas > li { display: grid; grid-template-columns: 66px minmax(0, 1fr); min-height: max(38px, var(--toque)); border-bottom: 1px solid var(--raya-2); }
 .libro-lineas time { display: flex; justify-content: flex-end; align-items: flex-start; gap: 3px; padding: 11px 10px 0 0; font-family: var(--f-dato); font-size: 12px; color: var(--tinta-3); font-variant-numeric: tabular-nums; }
 .libro-lineas li.llego time .ic { color: var(--ok); }
 .libro-res { display: grid; grid-template-columns: minmax(0, 1fr) auto 64px; align-items: baseline; gap: 2px 12px; width: 100%; padding: 9px 4px 8px 14px; border: 0; background: none; text-align: left; color: var(--tinta); cursor: pointer; }
@@ -920,11 +1114,34 @@ tr.tenue td { color: var(--tinta-3); }
   .libro-pie { padding-left: 62px; }
 }
 
+/* lo que se toca mide al menos 44 px de alto en pantallas táctiles y en el formato teléfono del prototipo (para verlo en la Mac):
+   filtros, botones chicos, «Elegir cuenta», turnos, renglones del menú, cerrar la ficha, menú, campana e interruptores. En la computadora no cambia nada. */
+@media (pointer: coarse) { :root { --toque: 44px; } }
+@container app (max-width: 719px) { .app { --toque: 44px; } }
 /* en el teléfono las cifras van de dos en dos: la información aparece sin bajar tanto */
 @container app (max-width: 719px) {
   .cifra { flex-basis: 140px; padding: 12px 12px 13px; }
   .cifra b { font-size: 21px; }
   .cifra small { font-size: 12px; }
-  .cifra .etq { font-size: 10.5px; }
+  .cifra .etq { font-size: 12px; letter-spacing: .05em; }
   button.cifra::after { right: 10px; top: 14px; }
 }
+
+/* ===== Tanda 3 de UX: firmas, préstamos, pruebas y reservas ===== */
+/* el día de la reserva: tres botones grandes (Hoy · Mañana · Otro día); el escogido lleva su visto y el borde de tinta, no solo un color */
+.dias { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.dias button { min-height: 54px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--borde-campo); border-radius: 10px; background: var(--hoja); color: var(--tinta); font-size: 15px; font-weight: 600; text-align: center; }
+.dias button > span { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.dias button small { font-size: 12px; font-weight: 500; color: var(--tinta-2); }
+.dias button:hover { background: var(--hoja-2); }
+.dias button[aria-pressed="true"] { border: 2px solid var(--tinta); background: var(--hoja-2); }
+.dias + .campo { margin-top: 8px; }
+.campo.error .dias button { border-color: var(--alerta); }
+/* «Así quedaría» del préstamo, también en su ficha: la etiqueta del tope va al lado del título */
+.bloque h3 .tag { font-size: 11.5px; }
+.asi-quedaria { display: flex; flex-direction: column; gap: 10px; }
+/* lo que sube un archivo y lo deja a la vista: el nombre del archivo en la zona para soltar */
+.soltar.lista { border-style: solid; border-color: var(--ok); background: var(--ok-fondo); }
+.soltar.lista .ic, .soltar.lista b { color: var(--ok); }
+/* la zona para subir un archivo muestra el foco del teclado (la casilla de verdad está escondida justo después) */
+.soltar:has(+ input:focus-visible) { outline: 2px solid var(--boligrafo); outline-offset: 2px; }

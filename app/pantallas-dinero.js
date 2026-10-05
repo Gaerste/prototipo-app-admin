@@ -27,8 +27,24 @@
   const faltaSocio = l => DE_SOCIO.includes(l.c) && !l.socio;
 
   /* =============== CAJA DEL DÍA =============== */
+  // la referencia: Jose busca y cruza los pagos por ella · '¿?' = el bot no la pudo leer · '—' = no es un pago
+  // el Zelle no trae número: lo que se ve es quién pagó («de M. Pérez»), sin botón de copiar · la orden de Binance se ve cortada
+  // («Orden 4402…118») y se copia entera, solo el número
+  const sinRef = c => c.ref === '—' || c.ref === '¿?';
+  const esZelle = c => c.tipo === 'Zelle';
+  const esOrden = c => c.tipo === 'USDT';
+  const refVista = c => esOrden(c) ? 'Orden ' + c.ref.slice(0, 4) + '…' + c.ref.slice(-3) : c.ref;
+  const conCopiar = (c, grande = false) => `<span class="ref"><span class="mono">${esc(refVista(c))}</span><button class="copiar${grande ? ' grande' : ''}" data-acc="copiar-ref" data-arg="${esc(c.ref)}" aria-label="${esOrden(c) ? 'Copiar el número de orden completo' : 'Copiar la referencia ' + esc(c.ref)}" title="${esOrden(c) ? 'Copiar el número de orden' : 'Copiar la referencia'}">${ic('copiar', 's')}</button></span>`;
+  const refCelda = c => sinRef(c) ? `<span class="tenue">${c.ref === '¿?' ? 'No se leyó' : '—'}</span>` : esZelle(c) ? 'de ' + esc(c.ref) : conCopiar(c);
+  // en el teléfono no cabe la columna: los últimos 6 dígitos van en la línea chica, para que al buscar se vea por qué salió el pago
+  const refCorta = c => sinRef(c) ? '' : esZelle(c) ? 'de ' + esc(c.ref) : esOrden(c) ? `orden <span class="mono">…${c.ref.slice(-6)}</span>` : /^\d{7,}$/.test(c.ref) ? `ref. <span class="mono">…${c.ref.slice(-6)}</span>` : /^\d+$/.test(c.ref) ? `ref. <span class="mono">${c.ref}</span>` : esc(c.ref.charAt(0).toLowerCase() + c.ref.slice(1));
+  // quién lo cerró: el bot o la persona que reaccionó ✅; mientras está por confirmar o avisado, nadie
+  const cerrado = c => c.estado === 'confirmado' || c.estado === 'descartado';
+  const cerroCelda = c => cerrado(c) ? esc(c.cerro.replace(/\s*\(.*\)$/, '')) + (c.doble ? ' · ' + tag('Doble check', 'ok') : '') : '<span class="tenue" aria-hidden="true">—</span><span class="sr-only">Todavía nadie</span>';
+  // la misma manera de copiar que en Reservas: si el navegador no deja, la referencia queda seleccionada (entera) para copiarla a mano
+  ACC['copiar-ref'] = (ref, btn) => { const el = btn && btn.closest('.ref') ? btn.closest('.ref').querySelector('.mono') : null; A.copiar(ref, { el, completo: true, ok: (/^\d{15,}$/.test(ref) ? 'Número de orden ' : 'Referencia ') + ref + ' copiada.' }); };
   PANT.caja = {
-    titulo: 'Caja del día', corto: 'Caja del día', tab: 'Caja', grupo: 'Dinero que entra', icono: 'caja', mod: 'caja',
+    titulo: 'Caja del día', corto: 'Caja del día', tab: 'Caja', grupo: 'Dinero que entra', icono: 'caja', mod: 'caja', palabras: 'cobros cobro pago movil zelle binance captura',
     cuenta: () => D.CAJA.filter(c => c.estado === 'por_confirmar').length,
     render: () => {
       const f = A.filtroActual('todos');
@@ -47,8 +63,8 @@
           ${A.cifra({ etq: 'Por confirmar', valor: cuenta('por_confirmar'), sub: 'tócalo para ver solo esos', tono: cuenta('por_confirmar') ? 'aviso' : '', acc: 'filtro', arg: 'por_confirmar' })}
         </div>
         ${A.filtros('t-caja', [['todos', 'Todos', D.CAJA.length], ['por_confirmar', 'Por confirmar', cuenta('por_confirmar')], ['avisado', 'Avisado', cuenta('avisado')], ['confirmado', 'Confirmado', cuenta('confirmado')], ['descartado', 'Descartado', cuenta('descartado')]], f, 'Buscar por monto o referencia')}
-        ${A.tabla({ id: 't-caja', cols: [{ t: 'Pago', cls: 'p' }, { t: 'Hora', cls: 'x' }, { t: 'Lo confirmó', cls: 'x' }, { t: 'Cuenta', cls: 'x' }, { t: 'Monto', cls: 'r' }, { t: 'Estado', cls: 'e' }],
-          filas: filas.map(c => ({ abrir: 'pago:' + c.id, txt: c.ref + ' ' + c.monto, celdas: [`<b>${esc(c.banco)} · ${esc(c.tipo)}</b><small>${esc(c.hora)} · ${esc(c.cajera)}${c.motivo ? ' · ' + esc(c.motivo) : ''}</small>`, esc(c.hora), esc(c.fuente) + (c.doble ? ' · ' + tag('Doble check', 'ok') : ''), acct(c.destino), c.monto ? dinero(c.monto, c.mon) : '—', A.estadoTag(c.estado)] })) })}
+        ${A.tabla({ id: 't-caja', cols: [{ t: 'Pago', cls: 'p' }, { t: 'Referencia', cls: 'x' }, { t: 'Lo cerró', cls: 'x' }, { t: 'Cuenta', cls: 'x' }, { t: 'Monto', cls: 'r plata' }, { t: 'Estado', cls: 'e' }],
+          filas: filas.map(c => ({ abrir: 'pago:' + c.id, txt: c.ref + ' ' + c.monto, celdas: [`<b>${esc(c.banco)} · ${esc(c.tipo)}</b><small>${esc(c.hora)} · ${esc(c.cajera)}${refCorta(c) ? `<span class="en-tel"> · ${refCorta(c)}</span>` : ''}${c.motivo ? ' · ' + esc(c.motivo) : ''}</small>`, refCelda(c), cerroCelda(c), acct(c.destino), c.monto ? dinero(c.monto, c.mon) : '—', A.estadoTag(c.estado)] })) })}
       </div>`;
     },
   };
@@ -70,11 +86,11 @@
     return {
       titulo: c.monto ? dinero(c.monto, c.mon) : 'Foto descartada', sub: `Pago de las ${esc(c.hora)} · ${esc(c.banco)}`, mod: 'caja', obj: c, tags: [[{ confirmado: 'Confirmado', por_confirmar: 'Por confirmar', avisado: 'Avisado: no cayó', descartado: 'Descartado' }[c.estado], { confirmado: 'ok', por_confirmar: 'aviso', avisado: 'alerta', descartado: '' }[c.estado]]],
       bloques: [
-        { html: `<figure class="captura"><div class="recibo"><span class="aro ${c.estado === 'confirmado' ? 'ok' : ''}">${ic(c.estado === 'confirmado' ? 'check' : 'reloj')}</span><strong>${esc(c.tipo)} ${c.estado === 'confirmado' ? 'exitoso' : c.motivo.includes('proceso') ? 'en proceso' : ''}</strong><span class="grande">${c.monto ? dinero(c.monto, c.mon) : '—'}</span><span class="mono muted">Ref. ${esc(c.ref)}</span><span class="mono muted">05/10/2026 ${esc(c.hora)}</span></div><figcaption class="muted">Captura simulada · la mandó ${esc(c.cajera)}</figcaption></figure>` },
-        { titulo: 'Lo que leyó el bot', filas: [{ l: 'Banco que paga', v: esc(c.banco) }, { l: 'Monto', v: c.monto ? dinero(c.monto, c.mon) : '—' }, { l: 'Referencia', v: `<span class="mono">${esc(c.ref)}</span>` }, { l: 'Cuenta que recibe', v: acct(c.destino) + (c.destino !== '—' ? ' ' + tag('Coincide', 'ok') : '') }, { l: 'Cómo se confirmó', v: esc(c.fuente) }, { l: 'Lo cerró', v: esc(c.cerro) }] },
+        { html: `<figure class="captura"><div class="recibo"><span class="aro ${c.estado === 'confirmado' ? 'ok' : ''}">${ic(c.estado === 'confirmado' ? 'check' : 'reloj')}</span><strong>${esc(c.tipo)} ${c.estado === 'confirmado' ? 'exitoso' : c.motivo.includes('proceso') ? 'en proceso' : ''}</strong><span class="grande">${c.monto ? dinero(c.monto, c.mon) : '—'}</span><span class="mono muted">${esZelle(c) ? 'De ' + esc(c.ref) : esc(esOrden(c) ? refVista(c) : 'Ref. ' + c.ref)}</span><span class="mono muted">05/10/2026 ${esc(c.hora)}</span></div><figcaption class="muted">Captura simulada · la mandó ${esc(c.cajera)}</figcaption></figure>` },
+        { titulo: 'Lo que leyó el bot', filas: [{ l: 'Banco que paga', v: esc(c.banco) }, { l: 'Monto', v: c.monto ? dinero(c.monto, c.mon) : '—' }, esZelle(c) ? { l: 'Quién pagó', v: esc(c.ref) + ' <small class="tenue">el correo del Zelle no trae número</small>' } : { l: esOrden(c) ? 'Número de orden' : 'Referencia', v: sinRef(c) ? (c.ref === '¿?' ? 'No se leyó' : '—') : conCopiar(c, true) }, { l: 'Cuenta que recibe', v: acct(c.destino) + (c.destino !== '—' ? ' ' + tag('Coincide', 'ok') : '') }, { l: 'Cómo se confirmó', v: c.estado === 'confirmado' ? esc(c.fuente) : c.estado === 'descartado' ? 'No se confirmó: no era un pago' : 'Todavía no se confirma' }, { l: 'Lo cerró', v: cerrado(c) ? esc(c.cerro) : 'Todavía nadie' }] },
         { titulo: 'Qué pasó', tiempo: tl },
       ],
-      aviso: c.estado === 'por_confirmar' ? `<p class="nota aviso">${ic('alerta', 's')}<span>Para confirmarlo, reacciona ✅ sobre la foto en el grupo Caja. En la fase 1 la app no confirma: solo muestra.</span></p>` : '',
+      aviso: c.estado === 'por_confirmar' ? `<p class="nota aviso">${ic('alerta', 's')}<span>Para confirmarlo, reacciona ✅ sobre la foto en el grupo Caja. Por ahora la app solo muestra; se confirma en el grupo.</span></p>` : '',
     };
   };
 
@@ -83,21 +99,22 @@
   const monCli = c => c.mon || 'eur';
   const enUsd = (m, mon) => mon === 'usd' ? m : m * D.TASA[mon] / D.TASA.usd; // a dólares con las tasas BCV de hoy, para compararlo con el límite
   PANT.clientes = {
-    titulo: 'Clientes y cobranza', corto: 'Clientes y cobranza', grupo: 'Dinero que entra', icono: 'clientes', mod: 'clientes',
+    titulo: 'Clientes y cobranza', corto: 'Clientes y cobranza', grupo: 'Dinero que entra', icono: 'clientes', mod: 'clientes', camino: 'Clientes', palabras: 'cobranza cuentas por cobrar deuda',
+    secciones: [['deben', 'Quién nos debe', 'deuda fiado credito abono'], ['empresas', 'Empresas y facturas', 'rif retencion'], ['fieles', 'Clientes fieles', 'cumpleanos campana']],
     render: (sub = 'deben') => {
       const deben = D.CLIENTES.filter(c => c.saldo > 0);
       const total = r2(deben.reduce((s, c) => s + c.saldo, 0)); // todos los cargos van en euros
       const viejos = deben.filter(c => c.antig > 30);
       let cuerpo = '';
-      if (sub === 'deben') cuerpo = A.filtros('t-cli', null, null, 'Buscar cliente') + A.tabla({ id: 't-cli', cols: [{ t: 'Cliente', cls: 'p' }, { t: 'Límite', cls: 'r x' }, { t: 'Días de atraso', cls: 'x' }, { t: 'Último pago', cls: 'x' }, { t: 'Debe', cls: 'r' }, { t: 'Estado', cls: 'e' }],
+      if (sub === 'deben') cuerpo = A.filtros('t-cli', null, null, 'Buscar cliente') + A.tabla({ id: 't-cli', cols: [{ t: 'Cliente', cls: 'p' }, { t: 'Límite', cls: 'r x plata' }, { t: 'Días de atraso', cls: 'x' }, { t: 'Último pago', cls: 'x' }, { t: 'Debe', cls: 'r plata' }, { t: 'Estado', cls: 'e' }],
         filas: D.CLIENTES.map(c => ({ abrir: 'cliente:' + c.id, celdas: [`<b>${esc(c.nombre)}</b><small>${esc(c.tipo)}${c.esp ? ' · contribuyente especial' : ''}</small>`, dinero(c.credito, 'usd', 0), c.saldo ? c.antig + ' días' : '—', esc(c.ultimo), dinero(c.saldo, monCli(c)), c.saldo === 0 ? tag('Al día', 'ok') : c.antig > 60 ? tag('Más de 60 días', 'alerta') : c.antig > 30 ? tag('Más de 30 días', 'aviso') : tag('Al día', '')] })),
         pie: ['Total', '', '', '', dinero(total, 'eur'), ''] }) + `<p class="muted">Lo que deben va en euros, como la carta. El límite va en dólares y se compara a la tasa BCV de hoy.</p>`;
       if (sub === 'empresas') cuerpo = `<p class="nota info">${ic('info', 's')}<span>Las empresas reciben factura con su RIF. Si son contribuyentes especiales nos pagan neto y nos mandan un comprobante de retención: esa plata se recupera en la declaración de IVA.</span></p>` +
-        A.tabla({ cols: [{ t: 'Factura', cls: 'p' }, { t: 'Cliente', cls: 'x' }, { t: 'Base', cls: 'r x' }, { t: 'IVA', cls: 'r' }, { t: 'Retención', cls: 'e' }], filas: D.VENTAS_EMPRESAS.map(v => ({ abrir: 'ventaemp:' + v.id, celdas: [`<b>N.º ${esc(v.num)}</b><small>${esc(v.fecha)} · ${esc(v.cliente)}</small>`, esc(v.cliente), dinero(v.base, 'bs'), dinero(v.iva, 'bs'), tag(v.retencion, v.retencion.startsWith('Esperando') ? 'aviso' : v.retencion.startsWith('Recibido') ? 'ok' : '')] })) });
+        A.tabla({ cols: [{ t: 'Factura', cls: 'p' }, { t: 'Cliente', cls: 'x' }, { t: 'Base', cls: 'r x plata' }, { t: 'IVA', cls: 'r plata' }, { t: 'Retención', cls: 'e' }], filas: D.VENTAS_EMPRESAS.map(v => ({ abrir: 'ventaemp:' + v.id, celdas: [`<b>N.º ${esc(v.num)}</b><small>${esc(v.fecha)} · ${esc(v.cliente)}</small>`, esc(v.cliente), dinero(v.base, 'bs'), dinero(v.iva, 'bs'), tag(v.retencion, v.retencion.startsWith('Esperando') ? 'aviso' : v.retencion.startsWith('Recibido') ? 'ok' : '')] })) });
       if (sub === 'fieles') cuerpo = `<div class="rejilla"><div class="c6 pila"><article class="hoja"><h2>${ic('clientes')}Clientes que dejaron de venir</h2><p class="muted">Venían al menos una vez al mes y llevan más de 45 días sin venir. Solo los que dieron permiso para escribirles.</p>
           <ul class="lista">${D.CLIENTES.filter(c => c.consiente && c.antig > 45).map(c => `<li><button class="fila" data-abrir="cliente:${c.id}"><span class="lead">${ic('usuario')}</span><span class="medio"><b>${esc(c.nombre)}</b><small>Última visita ${esc(c.ultimo)}</small></span>${ic('derecha', 's chev')}</button></li>`).join('')}</ul></article></div>
           <div class="c6 pila"><article class="hoja"><h2>${ic('calendario')}Cumpleaños de octubre</h2><p class="muted">3 clientes con permiso para recibir un mensaje. Las campañas salen del número oficial, nunca del número del bot.</p>${A.boton('clientes', 'Preparar un mensaje', 'data-acc="pronto"', { tono: 'sec', icono: 'mensaje' })}</article>
-          <p class="nota gris">${ic('candado', 's')}<span>Fase 8. Solo se escribe a quien dio permiso, y se guarda cuándo y cómo lo dio.</span></p></div></div>`;
+          <p class="nota gris">${ic('candado', 's')}<span>Más adelante. Solo se escribe a quien dio permiso, y se guarda cuándo y cómo lo dio.</span></p></div></div>`;
       return `<div class="pagina">${A.cab('Cuentas por cobrar', 'Clientes y cobranza', 'Quién nos debe, cuánto y desde cuándo. Lo que consumen va a precio de carta, en euros. Los abonos se aplican a la deuda más vieja.', A.boton('clientes', 'Cobrar un abono', 'data-acc="cobrar"', { icono: 'mas' }))}
         ${A.lectura('clientes')}
         <div class="cifras">
@@ -116,7 +133,7 @@
       titulo: c.nombre, sub: esc(c.tipo) + ' · ' + esc(c.rif), mod: 'clientes', obj: c, registro: 'Cliente ' + c.nombre,
       tags: [[c.saldo ? 'Debe ' + dinero(c.saldo, mon) : 'Al día', c.saldo ? (c.antig > 30 ? 'aviso' : '') : 'ok']].concat(c.esp ? [['Contribuyente especial', 'info']] : []),
       bloques: [
-        { titulo: 'Crédito', filas: [{ l: 'Debe', v: c.saldo ? `${dinero(c.saldo, mon)} <small class="tenue">≈ ${dinero(usd)} a la tasa de hoy</small>` : dinero(0, mon) }, { l: 'Moneda de los cargos', v: mon === 'eur' ? 'Euros, como la carta' : 'Dólares' }, { l: 'Límite de crédito ($)', v: dinero(c.credito, 'usd', 0), campo: { k: 'credito', tipo: 'dinero' } }, { l: 'Días para pagar', v: c.dias + ' días', campo: { k: 'dias', tipo: 'numero' } }, { l: 'Lo autorizó', v: 'Alejandro' }, { l: 'Contacto', v: esc(c.contacto), campo: { k: 'contacto', tipo: 'texto' } }, { l: 'Permiso para escribirle', v: c.consiente ? tag('Sí, dado en caja el 2 ago', 'ok') : tag('No', '') }] },
+        { titulo: 'Crédito', filas: [{ l: 'Debe', v: c.saldo ? `${dinero(c.saldo, mon)} <small class="tenue">≈ ${dinero(usd)} a la tasa de hoy</small>` : dinero(0, mon) }, { l: 'Moneda de los cargos', v: mon === 'eur' ? 'Euros, como la carta' : 'Dólares' }, { l: 'Límite de crédito ($)', v: dinero(c.credito, 'usd', 0), campo: { k: 'credito', tipo: 'dinero', obligatorio: true } }, { l: 'Días para pagar', v: c.dias + ' días', campo: { k: 'dias', tipo: 'numero', entero: true, obligatorio: true } }, { l: 'Lo autorizó', v: 'Alejandro' }, { l: 'Contacto', v: esc(c.contacto), campo: { k: 'contacto', tipo: 'texto' } }, { l: 'Permiso para escribirle', v: c.consiente ? tag('Sí, dado en caja el 2 ago', 'ok') : tag('No', '') }] },
         { titulo: 'Movimientos', tiempo: c.saldo ? [[c.ultimo, 'Último abono recibido.'], ['Hace ' + c.antig + ' d', 'Consumo a crédito que sigue abierto: ' + dinero(c.saldo, mon) + '.', c.antig > 30 ? 'aviso' : '']] : [[c.ultimo, 'Pagó todo. Sin deuda.', 'ok']] },
         { html: '<p class="muted">Lo que consume va a precio de carta, en euros: un abono en bolívares se convierte con el euro BCV del día. Un límite de más de $ 100 lo aprueba Alejandro. Recordatorio automático los lunes a los que pasan de 15 días, desde el número oficial.</p>' },
       ],
@@ -132,14 +149,14 @@
     const env = $('#modal-raiz');
     // lo que se propone cobrar: hasta 50 en la moneda del cargo, pasado a lo que llega
     const sugerido = (cl, desde) => r2(aMonedaDe(Math.min(50, cl.saldo), monCli(cl), desde));
-    env.innerHTML = `<div class="modal-env"><div class="modal" role="dialog" aria-modal="true"><h2>Cobrar un abono</h2>
+    A.modal(`<h2 id="modal-t">Cobrar un abono</h2>
       <label class="campo" for="ab-cli"><span>Cliente</span><select id="ab-cli">${D.CLIENTES.filter(x => x.saldo > 0).map(x => `<option value="${x.id}"${x.id === c.id ? ' selected' : ''}>${esc(x.nombre)} · debe ${dinero(x.saldo, monCli(x))}</option>`).join('')}</select></label>
       <label class="campo" for="ab-met"><span>Cómo pagó</span><select id="ab-met">${METODOS.map(([t, m]) => `<option value="${m}">${t}</option>`).join('')}</select></label>
       <div class="campos"><label class="campo" for="ab-recibido"><span id="ab-rec-t">Bs recibidos</span><input id="ab-recibido" inputmode="decimal" value="${fmt(sugerido(c, 'bs'))}" autocomplete="off"></label>
         <label class="campo" for="ab-tasa"><span>Tasa BCV de hoy</span><input id="ab-tasa" readonly value=""></label></div>
       <p class="chequeo" id="ab-conv"></p>
       <p class="muted">Sus cargos son consumos a precio de carta, en euros. El abono baja la deuda en euros.</p>
-      <div class="modal-acc"><button class="btn sec" data-ab="no">Cancelar</button><button class="btn pri" data-ab="si">Registrar el abono</button></div></div></div>`;
+      <div class="modal-acc"><button class="btn sec" data-ab="no">Cancelar</button><button class="btn pri" data-ab="si">Registrar el abono</button></div>`, 'teclado');
     const conv = () => {
       const cl = D.CLIENTES.find(x => x.id === $('#ab-cli').value); const mon = monCli(cl);
       const desde = $('#ab-met').value; const n = leerNum($('#ab-recibido').value); const el = $('#ab-conv');
@@ -159,15 +176,15 @@
     conv(); $('#ab-recibido').focus();
     env.onclick = e => {
       const b = e.target.closest('[data-ab]'); if (!b) return;
-      if (b.dataset.ab === 'no') { env.onclick = null; env.innerHTML = ''; return; }
+      if (b.dataset.ab === 'no') { A.cerrarModal(); return; }
       const v = conv(); if (!v) { $('#ab-recibido').focus(); return; }
       const met = $('#ab-met').selectedOptions[0].textContent.replace(/^(?!Zelle)./, ch => ch.toLowerCase()); // Zelle es nombre propio
       const antes = v.cl.saldo; v.cl.saldo = Math.max(0, r2(v.cl.saldo - v.en)); if (!v.cl.saldo) v.cl.antig = 0; v.cl.ultimo = '5 oct';
       A.auditar({ modulo: 'Clientes', registro: v.cl.nombre, campo: 'saldo', antes: dinero(antes, v.mon), despues: dinero(v.cl.saldo, v.mon), motivo: 'Abono de ' + dinero(v.n, v.desde) + ' por ' + met + ' a la tasa BCV de hoy = ' + dinero(v.en, v.mon) });
-      env.onclick = null; env.innerHTML = ''; A.pintarPagina(); if (S.ficha) A.pintarFicha(); A.aviso('Abono de ' + dinero(v.en, v.mon) + ' registrado. Se aplicó a la deuda más vieja.');
+      A.cerrarModal(); A.pintarPagina(); if (S.ficha) A.pintarFicha(); A.aviso('Abono de ' + dinero(v.en, v.mon) + ' registrado. Se aplicó a la deuda más vieja.');
     };
   };
-  ACC.pronto = () => A.aviso('Esta parte queda para su fase. En el prototipo se ve cómo será, sin funcionar.', 'info');
+  ACC.pronto = () => A.aviso('Esta parte llega más adelante. En el prototipo se ve cómo será, sin funcionar.', 'info');
   FICHAS.ventaemp = id => {
     const v = D.VENTAS_EMPRESAS.find(x => x.id === id);
     return { titulo: 'Factura N.º ' + v.num, sub: esc(v.cliente) + ' · ' + esc(v.fecha), mod: 'clientes', obj: v,
@@ -177,14 +194,14 @@
   FICHAS.devcliente = id => {
     const d = D.DEVCLIENTES.find(x => x.id === id);
     return { titulo: 'Devolver ' + dinero(d.monto), sub: 'Devolución a un cliente', mod: 'clientes', obj: d, tags: [[d.estado === 'aprobada' ? 'Aprobada' : 'Por aprobar', d.estado === 'aprobada' ? 'ok' : 'aviso']],
-      bloques: [{ filas: [{ l: 'A quién', v: esc(d.cliente) }, { l: 'Motivo', v: esc(d.motivo), largo: true }, { l: 'La preparó', v: esc(d.preparo) }, { l: 'Cómo se devuelve', v: 'Pago móvil desde BVCA' }] }, { html: '<p class="muted">La aprueba Jose o Alejandro con su código, nunca quien la preparó. Si hubo factura fiscal, se hace la nota de crédito en la máquina fiscal.</p>' }],
-      acciones: d.estado === 'por_aprobar' ? [{ txt: 'Aprobar con código', acc: 'aprobar-dev', arg: d.id, icono: 'check', tono: 'pri' }] : [] };
+      bloques: [{ filas: [{ l: 'A quién', v: esc(d.cliente) + (d.mesa ? ' <small class="tenue">' + esc(d.mesa) + '</small>' : '') }, { l: 'Motivo', v: esc(d.motivo), largo: true }, { l: 'La preparó', v: esc(d.preparo) }, { l: 'Cómo se devuelve', v: 'Pago móvil desde ' + A.cta('BVCA') }] }, { html: '<p class="muted">La aprueba Jose o Alejandro con su código, nunca quien la preparó. Si hubo factura fiscal, se hace la nota de crédito en la máquina fiscal.</p>' }],
+      acciones: d.estado === 'por_aprobar' ? [{ txt: 'Aprobar la devolución', acc: 'aprobar-dev', arg: d.id, icono: 'candado', tono: 'pri' }] : [] };
   };
   ACC['aprobar-dev'] = id => {
     const d = D.DEVCLIENTES.find(x => x.id === id);
     if (!(S.usuario.rol === 'dueno' || S.usuario.rol === 'contabilidad')) return A.aviso('La aprueban Jose o Alejandro.', 'info');
     if (d.preparo === S.usuario.nombre) return A.aviso('No puedes aprobar algo que preparaste tú. Lo aprueba otra persona.', 'info');
-    A.pedirCodigo('Aprobar la devolución de ' + dinero(d.monto) + '.').then(() => {
+    A.pedirCodigo({ que: 'Devolución a ' + esc(d.cliente) + ' · ' + dinero(d.monto) + ' · pago móvil desde ' + A.cta('BVCA'), det: esc(d.motivo) + ' · la preparó ' + esc(d.preparo), boton: 'Aprobar ' + dinero(d.monto) }).then(() => {
       d.estado = 'aprobada'; const p = D.PENDIENTES.find(x => x.abrir === 'devcliente:' + id); if (p) p.hecho = 'Aprobada por ' + S.usuario.nombre;
       A.auditar({ modulo: 'Clientes', registro: 'Devolución ' + dinero(d.monto), campo: 'estado', antes: 'por aprobar', despues: 'aprobada' });
       A.pintarFicha(); A.pintarPagina(); A.aviso('Devolución aprobada.');
@@ -192,8 +209,29 @@
   };
 
   /* =============== PAGOS DE LOS LUNES =============== */
-  const P = { menu: null, explica: null, recien: null, dudas: { pollos: false, traspaso: false }, pollos: null, aprobado: false, enviado: false, nota: null };
+  // aprobadoEn: lo que se aprobó (total, hora, quién y la «firma» del lote) · reabierto: el sello que se tachó al tocar «Cambiar el lote»
+  const P = { menu: null, explica: null, recien: null, dudas: { pollos: false, traspaso: false }, pollos: null, aprobado: false, enviado: false, nota: null, aprobadoEn: null, reabierto: null };
   const total = () => D.LUNES.reduce((s, r) => s + r.m, 0);
+  // al aprobar, el lote queda con candado: lo de abajo es lo aprobado hasta que alguien toque «Cambiar el lote», con motivo.
+  // la firma es lo que se va a pagar (cada línea marcada, de dónde sale, cuánto, qué socio, la captura y la cuenta del proveedor):
+  // si al enviar no coincide con la aprobada, no sale nada al grupo
+  const firmaLunes = () => JSON.stringify([D.LUNES.map(r => r.c ? [r.p, r.c, r.m, r.socio || '', r.cap ?? '', r.cta || ''] : [r.p]), P.pollos]);
+  const CERRADO = {
+    lunes: () => P.enviado ? 'El lote ya salió al grupo: ya no se cambia.' : 'El lote está aprobado. Para cambiar algo, toca «Cambiar el lote».',
+    nomina: () => PN.enviado ? 'El pago ya salió al grupo: ya no se cambia.' : 'El pago está aprobado. Para cambiar algo, toca «Cambiar el pago».',
+  };
+  ACC['lote-cerrado'] = arg => A.aviso((CERRADO[arg] || CERRADO.lunes)(), 'info');
+  // el sello dice el total, el día y la hora: así se ve de un vistazo si lo de abajo ya no es lo aprobado
+  const aprobacion = total => ({ total, dia: D.HOY.iso.slice(8) + ' ' + D.MESES[+D.HOY.iso.slice(5, 7) - 1].toUpperCase(), hora: D.HOY.hora, quien: S.usuario.nombre });
+  // la ventana del código del lote (y de la nómina): qué se aprueba y, en una línea, cuánto sale de cada cuenta con su resaltador
+  const sumasPor = (ls, monto) => Object.keys(CTAS).map(k => [k, r2(ls.filter(x => x.c === k).reduce((a, x) => a + monto(x), 0))]).filter(x => x[1]);
+  const pagosTxt = n => n + (n === 1 ? ' pago' : ' pagos');
+  const codigoLote = (q, n) => ({ que: 'Lote del lunes · ' + pagosTxt(n) + ' · ' + dinero(q.lista), det: A.porCuenta(sumasPor(D.LUNES, r => r.m)) + (q.dif ? '<span>Las capturas suman ' + dinero(q.caps) + ': va con tu nota.</span>' : ''), boton: 'Aprobar ' + dinero(q.lista) });
+  const codigoNom = (q, n) => ({ que: 'Pago de la nómina del ' + esc(D.PAGO_NOMINA.corto) + ' · ' + pagosTxt(n) + ' · ' + dinero(q.lista), det: A.porCuenta(sumasPor(PNL(), netoDe)) + (q.dif ? '<span>Las capturas suman ' + dinero(q.caps) + ': va con tu nota.</span>' : ''), boton: 'Aprobar ' + dinero(q.lista) });
+  const selloAprobado = (a, recien) => A.sello('Aprobado · ' + dinero(a.total), { recien, fecha: a.dia + ' ' + a.hora });
+  const selloTachado = a => A.sello('Aprobado · ' + dinero(a.total), { fecha: a.dia + ' ' + a.hora, tachado: true });
+  const ctaCerrada = (c, cual) => `<button class="cta-btn bloq" data-acc="lote-cerrado" data-arg="${cual}" aria-disabled="true">${ic('candado', 's')}${c ? `<span class="acct" data-c="${c}">${c}</span>` : '<span>Sin elegir</span>'}<span class="sr-only">, con candado: ${cual === 'nomina' ? 'el pago' : 'el lote'} está aprobado</span></button>`;
+  const soltarCerrado = cual => `<button type="button" class="soltar bloq" data-acc="lote-cerrado" data-arg="${cual}" aria-disabled="true">${ic('candado')}<span><b>Las capturas quedaron cerradas</b>${cual === 'nomina' ? 'El pago está aprobado. Para subir otra, toca «Cambiar el pago».' : 'El lote está aprobado. Para subir otra, toca «Cambiar el lote».'}</span></button>`;
   // cada pago guarda su moneda y su tasa (29 ago): la moneda sale de la cuenta de donde sale el pago
   const BANCO_DE = { BVCA: 'Venezolano', BVCE: 'Venezolano', BVCJ: 'Venezolano', BNC: 'BNC' };
   const monedaDe = c => c === 'BIN' ? 'USDT, a su tasa' : c === 'BOV' ? 'Dólares en efectivo' : c === 'SOCIO' ? 'La de la cuenta del socio' : c === 'APORTE' ? 'La que puso el socio' : 'Bolívares a tasa BCV';
@@ -216,7 +254,6 @@
     return { tot, sin, sinM, lista, caps, con, doble, n: con.length + (doble ? 1 : 0), faltan: pag.filter(r => r.cap == null), distintas: con.filter(r => Math.abs(r.cap - r.m) >= 0.005), dif: r2(caps - lista) };
   }
   const porQue = q => [...q.distintas.map(r => `${esc(prov(r.p).nombre)}: la captura dice ${dinero(r.cap)} y la lista ${dinero(r.m)}.`), ...q.faltan.map(r => `Falta la captura de ${esc(prov(r.p).nombre)}.`), ...(q.doble ? [`${esc(prov(q.doble.p).nombre)}: fueron dos pagos de ${dinero(q.doble.cap)}.`] : [])].join(' ');
-  const reAprobar = () => { if (P.aprobado && !P.enviado) { P.aprobado = false; P.nota = null; A.aviso('El lote cambió: hay que aprobarlo otra vez.', 'info'); } };
   const retDeLista = (soloPagadas = false) => D.FACTURAS.filter(f => retsDe(f) && saldoDelLote(f) > 0 && D.LUNES.some(r => r.p === f.prov && (!soloPagadas || r.c)));
   // «sin la retención de IVA (…) a A y B, y sin la de ISLR (…) a C»: la de IVA va en la planilla de IVA y la de ISLR, en la declaración de retenciones de ISLR
   const enLista = arr => arr.join(', ').replace(/, ([^,]*)$/, ' y $1');
@@ -244,7 +281,11 @@
     const marcada = !!r.c && i !== P.recien;
     let cuenta;
     if (bl) cuenta = `<button class="alerta-btn" data-pl="explica" data-i="${i}" aria-expanded="${P.explica === i}">${ic('candado', 's')}Cuenta por verificar</button>`;
-    else cuenta = `<button class="cta-btn${r.c ? '' : ' vacia'}" data-pl="menu" data-i="${i}" aria-haspopup="menu" aria-expanded="${P.menu === i}" ${puedeMarcar && !P.enviado ? '' : 'disabled title="Solo lectura"'}>${r.c ? `<span class="acct" data-c="${r.c}">${r.c}</span>` : 'Elegir cuenta'}${ic('abajo', 's')}</button>`;
+    // con el lote aprobado, quien edita ve la cuenta con candado: al tocarla le dice cómo se cambia
+    else if (puedeMarcar && P.aprobado && !P.enviado) cuenta = ctaCerrada(r.c, 'lunes');
+    // quien solo mira, o con el lote ya enviado, ve la cuenta como dato, no como un botón que no responde
+    else cuenta = puedeMarcar && !P.enviado ? `<button class="cta-btn${r.c ? '' : ' vacia'}" data-pl="menu" data-i="${i}" aria-haspopup="menu" aria-expanded="${P.menu === i}">${r.c ? `<span class="acct" data-c="${r.c}">${r.c}</span>` : 'Elegir cuenta'}${ic('abajo', 's')}</button>`
+      : r.c ? `<span class="acct" data-c="${r.c}">${r.c}</span>` : '<span class="tenue">Sin elegir</span>';
     if (P.menu === i) cuenta += `<div class="menu" role="menu" aria-label="De qué cuenta salió">${Object.keys(CTAS).map(k => `<button role="menuitem" data-pl="pick" data-i="${i}" data-c="${k}"><span class="acct" data-c="${k}">${k}</span><small>${CTAS[k]}</small></button>`).join('')}${r.c ? `<button role="menuitem" class="quitar" data-pl="pick" data-i="${i}" data-c="">Quitar la marca</button>` : ''}</div>`;
     const estado = bl ? tag('Por verificar', 'alerta') : !r.c ? tag('Sin pagar') : faltaSocio(r) ? tag('Falta decir qué socio', 'aviso') : (r.duda && !P.dudas[r.duda]) ? tag('Por revisar', 'aviso') : r.cap == null ? tag('Falta la captura', 'aviso') : Math.abs(r.cap - r.m) >= 0.005 ? tag('No cuadra', 'aviso') : tag('Pagado', 'ok');
     let h = `<div class="lfila${marcada ? ' pagada' : ''}" role="row" data-i="${i}">
@@ -263,8 +304,13 @@
     const fr = retDeLista(); const retTot = r2(fr.reduce((s, f) => s + retsDe(f), 0));
     const esDueno = puede('pagos', 'aprobar'); const sinSocio = D.LUNES.filter(faltaSocio).length;
     const paso = P.enviado ? `<div class="sello-linea">${A.sello('Enviado', { recien: P.selloRecien === 'enviado', fecha: '05 OCT 2026' })}<span class="muted">Salió al grupo «Comprobantes de pago» con el PDF. (Simulado)</span></div>`
-      : P.aprobado ? `<div class="sello-linea">${A.sello('Aprobado', { recien: P.selloRecien === 'aprobado', fecha: '05 OCT 2026 · ' + D.HOY.hora })}<span class="muted">Lo aprobó Alejandro con su código${P.nota ? ', con la nota de la diferencia' : ''}.</span></div>${A.boton('pagos', 'Enviar al grupo', 'data-pl="enviar"', { icono: 'enviar' })}`
-        : (esDueno ? `<button class="btn pri full" data-pl="aprobar" ${pend || sinSocio || !pagado ? 'disabled' : ''}>${ic('candado', 's')}Aprobar el lote</button>` : `<button class="btn bloq full" data-acc="sin-permiso" data-arg="pagos">${ic('candado', 's')}Aprobar el lote (lo aprueba Alejandro)</button>`);
+      // aprobado: el sello con el total y la hora, la nota fija y «Cambiar el lote» (lo reabre con motivo)
+      : P.aprobado ? `<div class="sello-linea">${selloAprobado(P.aprobadoEn, P.selloRecien === 'aprobado')}<span class="muted">Lo aprobó ${esc(P.aprobadoEn.quien)} con su código${P.nota ? ', con la nota de la diferencia' : ''}.</span></div>
+          ${puede('pagos', 'editar') ? `<p class="nota gris">${ic('candado', 's')}<span><b>Aprobado.</b> Para cambiar algo, toca «Cambiar el lote».</span></p>` : ''}
+          ${A.boton('pagos', 'Enviar al grupo', 'data-pl="enviar"', { icono: 'enviar' })}${A.boton('pagos', 'Cambiar el lote', 'data-pl="reabrir"', { tono: 'sec', icono: 'lapiz' })}`
+        // reabierto: el sello de antes queda tachado, con quién lo reabrió y para qué, hasta que se apruebe otra vez
+        : (P.reabierto ? `<div class="sello-linea">${selloTachado(P.reabierto)}<span class="muted">Se reabrió a las ${esc(P.reabierto.horaReabrio)} para cambiarlo (${esc(P.reabierto.reabrio)}): «${esc(P.reabierto.motivo)}». Hay que aprobarlo otra vez.</span></div>` : '')
+          + (esDueno ? `<button class="btn pri full" data-pl="aprobar" ${pend || sinSocio || !pagado ? 'disabled' : ''}>${ic('candado', 's')}Aprobar el lote</button>` : puede('pagos', 'editar') ? `<button class="btn bloq full" data-acc="sin-permiso" data-arg="pagos|aprobar" aria-disabled="true">${ic('candado', 's')}Aprobar el lote (lo aprueba Alejandro)</button>` : '');
     const dosPollos = `Quedan los dos pagos de ${pl ? dinero(pl.m) : ''}: el segundo suma a las capturas y va explicado en la nota.`;
     return `<div class="pila">
       <div class="hoja" style="gap:8px"><p class="progress-line" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><span>Pagado <b class="num">${dinero(pagado)}</b> de <b class="num">${dinero(total())}</b></span><span class="muted">${sin.length ? 'Faltan ' + sin.length + ' pagos' : 'Todo pagado'}</span></p><div class="pista" style="height:10px"><span style="width:${(pagado / total() * 100).toFixed(1)}%;background:var(--tinta)"></span></div></div>
@@ -275,8 +321,8 @@
         </div>
         <aside class="lado">
           <section class="hoja"><h2>Comprobantes</h2>
-            <label class="soltar${puede('pagos', 'editar') && !P.enviado ? '' : ' bloq'}" for="capturas">${ic('subir')}<span><b>Sube todas las capturas de una vez</b>La app las lee y las casa con cada línea.</span></label>
-            <input type="file" id="capturas" accept="image/*,application/pdf" multiple class="sr-only" ${puede('pagos', 'editar') && !P.enviado ? '' : 'disabled'}>
+            ${puede('pagos', 'editar') && !P.enviado ? (P.aprobado ? soltarCerrado('lunes') : `<label class="soltar" for="capturas">${ic('subir')}<span><b>Sube todas las capturas de una vez</b>La app las lee y las casa con cada línea.</span></label>
+            <input type="file" id="capturas" accept="image/*,application/pdf" multiple class="sr-only">`) : ''}
             <button class="enlace" data-abrir="capturas:lote">${leidas(q)} leídas · ${q.n} casadas · ${pend} por revisar ${ic('derecha', 's')}</button>
             <div class="dudas">
               <div class="duda${P.dudas.pollos ? ' resuelta' : ''}"><p><b>Pollos El Granjero aparece dos veces.</b> ¿Fueron dos intentos del mismo pago?</p>${P.dudas.pollos ? `<p>${ic('check', 's')} ${esc(P.dudas.pollos)}</p>` : `<div class="btns">${A.boton('pagos', 'El 2.º se devolvió', 'data-pl="duda" data-d="pollos" data-v="devuelto" data-r="El banco devolvió el segundo intento. Cuenta una sola vez."', { tono: 'sec', chico: true })}${A.boton('pagos', 'Fueron dos pagos', `data-pl="duda" data-d="pollos" data-v="dos" data-r="${esc(dosPollos)}"`, { tono: 'sec', chico: true })}</div>`}</div>
@@ -303,7 +349,8 @@
   /* ---------- pagar la nómina: el mismo camino que los proveedores (3 oct) ---------- */
   // la lista sale del reporte que sube Andreina en Nómina (RRHH no ve Pagos), en su orden: primero la corrida formal y después la interna, por banco
   // el monto de cada línea es el neto de su recibo, la misma cifra de la pre-nómina · la lista por persona solo la ven quienes ven sueldos
-  const PN = { menu: null, explica: null, recien: null, aprobado: false, enviado: false, nota: null, selloRecien: null };
+  // con el mismo candado que el lote del lunes: aprobado, no se cambia nada hasta tocar «Cambiar el pago»
+  const PN = { menu: null, explica: null, recien: null, aprobado: false, enviado: false, nota: null, selloRecien: null, aprobadoEn: null, reabierto: null };
   const PNL = () => D.PAGO_NOMINA.lineas;
   const empDe = id => D.EMPLEADOS.find(e => e.id === id) || { nombre: '—', cargo: '', cuenta: '—', titular: '' };
   const netoDe = l => r2(A.lineaNomina(empDe(l.e)).neto);
@@ -323,12 +370,16 @@
     return { tot, sin, sinM, lista, caps, con, n: con.length, faltan: pag.filter(l => capNom(l) == null), distintas: con.filter(l => Math.abs(capNom(l) - netoDe(l)) >= 0.005), dif: r2(caps - lista) };
   }
   const porQueNom = q => [...q.distintas.map(l => `${esc(empDe(l.e).nombre)}: la captura dice ${dinero(capNom(l))} y la lista ${dinero(netoDe(l))}.`), ...q.faltan.map(l => `Falta la captura de ${esc(empDe(l.e).nombre)}.`)].join(' ');
-  const reAprobarNom = () => { if (PN.aprobado && !PN.enviado) { PN.aprobado = false; PN.nota = null; A.aviso('La lista cambió: hay que aprobarla otra vez.', 'info'); } };
+  const firmaNomina = () => JSON.stringify(PNL().map(l => l.c ? [l.e, l.c, netoDe(l), l.cap ? 1 : 0, l.capBs ?? '', l.socio || ''] : [l.e]));
   function filaNom(l, i) {
     const e = empDe(l.e); const bl = bloqNom(l); const marcada = !!l.c && i !== PN.recien; const cap = capNom(l); const [banco, num] = partesCta(e);
     let cuenta;
     if (bl) cuenta = `<button class="alerta-btn" data-pn="explica" data-i="${i}" aria-expanded="${PN.explica === i}">${ic('candado', 's')}Cuenta por verificar</button>`;
-    else cuenta = `<button class="cta-btn${l.c ? '' : ' vacia'}" data-pn="menu" data-i="${i}" aria-haspopup="menu" aria-expanded="${PN.menu === i}" ${puede('pagos', 'editar') && !PN.enviado ? '' : 'disabled title="Solo lectura"'}>${l.c ? `<span class="acct" data-c="${l.c}">${l.c}</span>` : 'Elegir cuenta'}${ic('abajo', 's')}</button>`;
+    // con el pago aprobado, quien edita ve la cuenta con candado: al tocarla le dice cómo se cambia
+    else if (puede('pagos', 'editar') && PN.aprobado && !PN.enviado) cuenta = ctaCerrada(l.c, 'nomina');
+    // quien solo mira, o con el pago ya enviado, ve la cuenta como dato, no como un botón que no responde
+    else cuenta = puede('pagos', 'editar') && !PN.enviado ? `<button class="cta-btn${l.c ? '' : ' vacia'}" data-pn="menu" data-i="${i}" aria-haspopup="menu" aria-expanded="${PN.menu === i}">${l.c ? `<span class="acct" data-c="${l.c}">${l.c}</span>` : 'Elegir cuenta'}${ic('abajo', 's')}</button>`
+      : l.c ? `<span class="acct" data-c="${l.c}">${l.c}</span>` : '<span class="tenue">Sin elegir</span>';
     if (PN.menu === i) cuenta += `<div class="menu" role="menu" aria-label="De qué cuenta salió">${Object.keys(CTAS).map(k => `<button role="menuitem" data-pn="pick" data-i="${i}" data-c="${k}"><span class="acct" data-c="${k}">${k}</span><small>${CTAS[k]}</small></button>`).join('')}${l.c ? `<button role="menuitem" class="quitar" data-pn="pick" data-i="${i}" data-c="">Quitar la marca</button>` : ''}</div>`;
     const estado = bl ? tag('Por verificar', 'alerta') : !l.c ? tag('Sin pagar') : faltaSocio(l) ? tag('Falta decir qué socio', 'aviso') : cap == null ? tag('Falta la captura', 'aviso') : Math.abs(cap - netoDe(l)) >= 0.005 ? tag('No cuadra', 'aviso') : tag('Pagado', 'ok');
     let h = `<div class="lfila${marcada ? ' pagada' : ''}" role="row" data-n="${i}">
@@ -368,8 +419,11 @@
           ${ls.map(x => filaNom(x.l, x.i)).join('')}</div>`; };
     const subt = Object.keys(CTAS).map(k => { const s = r2(PNL().filter(l => l.c === k).reduce((a, l) => a + netoDe(l), 0)); return s ? `<div><span class="acct" data-c="${k}">${k}</span><b>${dinero(s)}</b></div>` : ''; }).join('');
     const paso = PN.enviado ? `<div class="sello-linea">${A.sello('Enviado', { recien: PN.selloRecien === 'enviado', fecha: '05 OCT 2026' })}<span class="muted">Salió al grupo «Pagos al Personal» con el PDF y le avisamos a Andreina. (Simulado)</span></div>`
-      : PN.aprobado ? `<div class="sello-linea">${A.sello('Aprobado', { recien: PN.selloRecien === 'aprobado', fecha: '05 OCT 2026 · ' + D.HOY.hora })}<span class="muted">Lo aprobó Alejandro con su código${PN.nota ? ', con la nota de la diferencia' : ''}.</span></div>${A.boton('pagos', 'Enviar al grupo', 'data-pn="enviar"', { icono: 'enviar' })}`
-        : (esDueno ? `<button class="btn pri full" data-pn="aprobar" ${pagado && !sinSocio ? '' : 'disabled'}>${ic('candado', 's')}Aprobar el pago</button>` : `<button class="btn bloq full" data-acc="sin-permiso" data-arg="pagos">${ic('candado', 's')}Aprobar el pago (lo aprueba Alejandro)</button>`);
+      : PN.aprobado ? `<div class="sello-linea">${selloAprobado(PN.aprobadoEn, PN.selloRecien === 'aprobado')}<span class="muted">Lo aprobó ${esc(PN.aprobadoEn.quien)} con su código${PN.nota ? ', con la nota de la diferencia' : ''}.</span></div>
+          ${puede('pagos', 'editar') ? `<p class="nota gris">${ic('candado', 's')}<span><b>Aprobado.</b> Para cambiar algo, toca «Cambiar el pago».</span></p>` : ''}
+          ${A.boton('pagos', 'Enviar al grupo', 'data-pn="enviar"', { icono: 'enviar' })}${A.boton('pagos', 'Cambiar el pago', 'data-pn="reabrir"', { tono: 'sec', icono: 'lapiz' })}`
+        : (PN.reabierto ? `<div class="sello-linea">${selloTachado(PN.reabierto)}<span class="muted">Se reabrió a las ${esc(PN.reabierto.horaReabrio)} para cambiarlo (${esc(PN.reabierto.reabrio)}): «${esc(PN.reabierto.motivo)}». Hay que aprobarlo otra vez.</span></div>` : '')
+          + (esDueno ? `<button class="btn pri full" data-pn="aprobar" ${pagado && !sinSocio ? '' : 'disabled'}>${ic('candado', 's')}Aprobar el pago</button>` : puede('pagos', 'editar') ? `<button class="btn bloq full" data-acc="sin-permiso" data-arg="pagos|aprobar" aria-disabled="true">${ic('candado', 's')}Aprobar el pago (lo aprueba Alejandro)</button>` : '');
     return `<div class="pila">
       ${cabeza}<p class="nota info">${ic('info', 's')}<span><b>Así se verá el pago.</b> La lista de abajo es un ejemplo a medio pagar con la pre-nómina estimada. La de verdad sale del reporte que sube Andreina en Nómina después del visto final de Alejandro.</span></p></article>
       <div class="hoja" style="gap:8px"><p class="progress-line" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><span>Pagado <b class="num">${dinero(pagado)}</b> de <b class="num">${dinero(q.tot)}</b></span><span class="muted">${q.sin.length ? 'Faltan ' + q.sin.length + (q.sin.length === 1 ? ' pago' : ' pagos') : 'Todo pagado'}</span></p><div class="pista" style="height:10px"><span style="width:${q.tot ? (pagado / q.tot * 100).toFixed(1) : 0}%;background:var(--tinta)"></span></div></div>
@@ -381,8 +435,8 @@
             <button class="adjunto" data-acc="ver-archivo" data-arg="${esc(R.archivo)}">${ic('archivo', 's')}<span>${esc(R.archivo)}</span></button>
             <p class="muted">Lo subió ${esc(R.subio)} en Nómina · ${esc(R.cuando.charAt(0).toLowerCase() + R.cuando.slice(1))}. La lista va en su orden: primero la corrida formal y después la interna, cada una por banco.</p></section>
           <section class="hoja"><h2>Comprobantes</h2>
-            <label class="soltar${puedeEd ? '' : ' bloq'}" for="capturas-nom">${ic('subir')}<span><b>Sube todas las capturas de una vez</b>La app las lee y las casa con cada persona.</span></label>
-            <input type="file" id="capturas-nom" accept="image/*,application/pdf" multiple class="sr-only" ${puedeEd ? '' : 'disabled'}>
+            ${puedeEd ? (PN.aprobado ? soltarCerrado('nomina') : `<label class="soltar" for="capturas-nom">${ic('subir')}<span><b>Sube todas las capturas de una vez</b>La app las lee y las casa con cada persona.</span></label>
+            <input type="file" id="capturas-nom" accept="image/*,application/pdf" multiple class="sr-only">`) : ''}
             <button class="enlace" data-abrir="capturas:nomina">${q.n} leídas · ${q.n} casadas · ${q.faltan.length} por subir ${ic('derecha', 's')}</button></section>
           <section class="hoja"><h2>Cuadre</h2>
             <dl class="kv"><div><dt>Lista de la nómina</dt><dd>${dinero(q.tot)}</dd></div><div><dt>Sin pagar (${q.sin.length})</dt><dd>− ${dinero(q.sinM)}</dd></div><div class="total"><dt>Lista − sin pagar</dt><dd>${dinero(q.lista)}</dd></div><div><dt>Suma de las capturas (${q.n})</dt><dd>${dinero(q.caps)}</dd></div>${q.dif ? `<div><dt>Diferencia</dt><dd>${q.dif > 0 ? '+' : '−'} ${dinero(Math.abs(q.dif))}</dd></div>` : ''}</dl>
@@ -404,16 +458,17 @@
   // la nómina pagada también queda como lote: una fila por fecha de pago, con sus corridas
   const lotesNomina = () => [...new Set(D.NOMINA.corridas.map(c => c.fecha))].map(f => { const cs = D.NOMINA.corridas.filter(c => c.fecha === f); return { f, cs, personas: cs.filter(c => c.tipo === 'formal' || c.tipo === 'interna').reduce((s, c) => s + c.personas, 0), usd: r2(cs.reduce((s, c) => s + c.usd, 0)) }; });
   function anteriores() {
-    return A.tabla({ cols: [{ t: 'Lote', cls: 'p' }, { t: 'Pagos', cls: 'x' }, { t: 'Aprobó', cls: 'x' }, { t: 'Total', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas: LOTES.map(([f, n, t]) => ({ abrir: 'pdf:' + f, celdas: [`<b>${f}</b><small>PDF enviado al grupo</small>`, n, 'Alejandro', dinero(t), tag('Enviado', 'ok')] })) })
+    return A.tabla({ cols: [{ t: 'Lote', cls: 'p' }, { t: 'Pagos', cls: 'x' }, { t: 'Aprobó', cls: 'x' }, { t: 'Total', cls: 'r plata' }, { t: 'Estado', cls: 'e' }], filas: LOTES.map(([f, n, t]) => ({ abrir: 'pdf:' + f, celdas: [`<b>${f}</b><small>PDF enviado al grupo</small>`, n, 'Alejandro', dinero(t), tag('Enviado', 'ok')] })) })
       + `<div class="sec"><h2>Nómina</h2><span class="muted">cada fecha con sus corridas: la formal, la interna, el 10 % y el premio</span></div>`
-      + A.tabla({ cols: [{ t: 'Nómina', cls: 'p' }, { t: 'Personas', cls: 'x' }, { t: 'Aprobó', cls: 'x' }, { t: 'Total', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas: lotesNomina().map(x => ({ abrir: 'pdf:nom|' + x.f, celdas: [`<b>Nómina del ${esc(x.f)}</b><small>${x.cs.length} corridas · PDF enviado a «Pagos al Personal»</small>`, x.personas, 'Alejandro', '≈ ' + dinero(x.usd), tag('Enviado', 'ok')] })) })
+      + A.tabla({ cols: [{ t: 'Nómina', cls: 'p' }, { t: 'Personas', cls: 'x' }, { t: 'Aprobó', cls: 'x' }, { t: 'Total', cls: 'r plata' }, { t: 'Estado', cls: 'e' }], filas: lotesNomina().map(x => ({ abrir: 'pdf:nom|' + x.f, celdas: [`<b>Nómina del ${esc(x.f)}</b><small>${x.cs.length} corridas · PDF enviado a «Pagos al Personal»</small>`, x.personas, 'Alejandro', '≈ ' + dinero(x.usd), tag('Enviado', 'ok')] })) })
       + `<p class="muted">El total de la nómina va en dólares a la tasa de cada día de pago; el 10 % se paga en euros.</p>`;
   }
   PANT.pagos = {
-    titulo: 'Pagos de los lunes', corto: 'Pagos', tab: 'Pagos', grupo: 'Dinero que sale', icono: 'pagos', mod: 'pagos',
+    titulo: 'Pagos de los lunes', corto: 'Pagos', tab: 'Pagos', grupo: 'Dinero que sale', icono: 'pagos', mod: 'pagos', palabras: 'pagar lunes lote transferencia',
+    secciones: [['lunes', 'Proveedores', 'lote capturas'], ['nomina', 'Pagar la nómina', 'sueldos quincena'], ['anteriores', 'Lotes anteriores', 'historial pdf']],
     cuenta: () => D.LUNES.filter(r => !r.c).length,
     render: (sub = 'lunes') => `<div class="pagina">
-      ${A.cab(D.HOY.largo, 'Pagos de los lunes', 'La lista se armó sola a las 6:00 con todo lo que vence antes del lunes que viene. <b>Hoy usa las facturas importadas a mano el domingo 4</b>: la copia automática de Odoo sigue bloqueada hasta que se arregle el candado.', puede('pagos', 'editar') && sub === 'lunes' ? `<button class="btn sec chico" data-acc="linea-nueva">${ic('mas', 's')}Agregar una línea</button>` : '')}
+      ${A.cab(D.HOY.largo, 'Pagos de los lunes', 'La lista se armó sola a las 6:00 con todo lo que vence antes del lunes que viene. <b>Hoy usa las facturas importadas a mano el domingo 4</b>: la copia automática de Odoo sigue bloqueada hasta que se arregle el candado.', puede('pagos', 'editar') && sub === 'lunes' ? (P.aprobado ? `<button class="btn bloq chico" data-acc="lote-cerrado" data-arg="lunes" aria-disabled="true">${ic('candado', 's')}Agregar una línea</button>` : `<button class="btn sec chico" data-acc="linea-nueva">${ic('mas', 's')}Agregar una línea</button>`) : '')}
       ${A.lectura('pagos')}
       ${A.subnav([['lunes', 'Proveedores', D.LUNES.filter(r => !r.c).length, true], ['nomina', 'Pagar la nómina', PNL().filter(l => !l.c).length, true], ['anteriores', 'Lotes anteriores']], sub)}
       ${sub === 'lunes' ? lunesProveedores() : sub === 'nomina' ? lunesNomina() : anteriores()}
@@ -423,8 +478,8 @@
       // simulado: las capturas nuevas casan con las líneas marcadas que todavía no tienen la suya
       if (cap) cap.addEventListener('change', e => {
         const n = e.target.files.length; if (!n) return;
+        if (P.aprobado) { ACC['lote-cerrado']('lunes'); return; }
         const sinCap = D.LUNES.filter(r => r.c && r.cap == null); sinCap.forEach(r => { r.cap = r.m; });
-        if (sinCap.length) reAprobar();
         A.pintarPagina();
         A.aviso(n + (n === 1 ? ' captura nueva. ' : ' capturas nuevas. ') + (sinCap.length ? 'Casaron con ' + sinCap.map(r => prov(r.p).nombre).join(', ') + '. (Simulado)' : 'Ninguna línea marcada estaba sin captura. (Simulado)'), 'info');
       });
@@ -432,17 +487,35 @@
       const capN = $('#capturas-nom', raiz);
       if (capN) capN.addEventListener('change', e => {
         const n = e.target.files.length; if (!n) return;
+        if (PN.aprobado) { ACC['lote-cerrado']('nomina'); return; }
         const sinCap = PNL().filter(l => l.c && capNom(l) == null); sinCap.forEach(l => { l.cap = true; });
-        if (sinCap.length) reAprobarNom();
         A.pintarPagina();
         A.aviso(n + (n === 1 ? ' captura nueva. ' : ' capturas nuevas. ') + (sinCap.length ? 'Casaron con ' + sinCap.map(l => empDe(l.e).nombre).join(', ') + '. (Simulado)' : 'Ninguna persona marcada estaba sin captura. (Simulado)'), 'info');
       });
     },
   };
+  // «Cambiar el lote» (o «Cambiar el pago» de la nómina): reabre lo aprobado con motivo. El sello queda tachado, «Enviar al grupo»
+  // se apaga y vuelve a quedar por aprobar; si lo reabre alguien que no aprueba, a Alejandro le llega el pendiente
+  // (la versión que muestra solo lo que cambió llega en otra ronda)
+  function reabrir(cual) {
+    const X = cual === 'nomina' ? PN : P; const que = cual === 'nomina' ? 'el pago' : 'el lote'; const boton = cual === 'nomina' ? 'Cambiar el pago' : 'Cambiar el lote';
+    if (!X.aprobado || X.enviado) return;
+    A.pedirMotivo({ titulo: boton, texto: `${que.charAt(0).toUpperCase() + que.slice(1)} vuelve a quedar por aprobar: el sello se tacha y «Enviar al grupo» se apaga hasta que ${esc(A.quienAprueba('pagos'))} lo apruebe otra vez.`, etiqueta: 'Qué hay que cambiar', boton }).then(m => {
+      X.reabierto = { ...X.aprobadoEn, reabrio: S.usuario.nombre, horaReabrio: D.HOY.hora, motivo: m };
+      X.aprobado = false; X.aprobadoEn = null; X.nota = null;
+      A.auditar({ modulo: cual === 'nomina' ? 'Pagar la nómina' : 'Pagos de los lunes', registro: cual === 'nomina' ? 'Nómina del ' + D.PAGO_NOMINA.corto : 'Lote del ' + LOTE, campo: 'estado', antes: 'aprobado', despues: 'por aprobar: se reabrió para cambiarlo', motivo: m });
+      if (!puede('pagos', 'aprobar')) D.PENDIENTES.unshift({ id: 'pe' + Date.now(), para: ['alejandro'], tipo: 'aviso', titulo: cual === 'nomina' ? 'Aprobar otra vez el pago de la nómina' : 'Aprobar otra vez el lote del lunes', sub: S.usuario.nombre + ' lo reabrió para cambiarlo: «' + m + '»', de: S.usuario.nombre, edad: 'Ahora', ir: 'pagos', sub2: cual === 'nomina' ? 'nomina' : 'lunes', lote: cual });
+      A.pintarPagina(); A.aviso('Ya puedes cambiar ' + que + '. Quedó por aprobar otra vez.');
+    }).catch(() => {});
+  }
+  // al aprobar otra vez, el pendiente de «aprobar otra vez» queda resuelto
+  const cierraReabierto = cual => D.PENDIENTES.filter(p => p.lote === cual && !p.hecho).forEach(p => { p.hecho = 'Aprobado otra vez por ' + S.usuario.nombre; });
   document.addEventListener('click', e => {
     const b = e.target.closest('[data-pl]');
     if (!b) { if (P.menu !== null && !e.target.closest('.c-cuenta') && S.ruta === 'pagos') { P.menu = null; A.pintarPagina(); } return; }
     const i = +b.dataset.i; const a = b.dataset.pl;
+    // aprobado, el lote no se toca: ni la cuenta de una línea ni las dudas de las capturas
+    if (P.aprobado && ['menu', 'pick', 'duda'].includes(a)) { P.menu = null; ACC['lote-cerrado']('lunes'); return; }
     if (a === 'menu') { P.menu = P.menu === i ? null : i; A.pintarPagina(); const f = $('.menu button'); if (f) f.focus(); }
     else if (a === 'pick') {
       const r = D.LUNES[i]; const k = b.dataset.c || null; const antes = r.c; r.c = k; P.menu = null; if (k && k !== antes) P.recien = i;
@@ -450,23 +523,32 @@
       const soltada = k !== antes && r.cap != null; if (soltada) { delete r.cap; delete r.capBs; }
       if (k !== antes && !DE_SOCIO.includes(k)) delete r.socio;
       A.auditar({ modulo: 'Pagos de los lunes', registro: prov(r.p).nombre, campo: 'sale de', antes: antes || 'sin pagar', despues: k || 'sin pagar' });
-      if (k !== antes) reAprobar();
       if (soltada) A.aviso(k ? 'La captura que había salió de ' + antes + ': ya no casa. Sube la de ' + k + '.' : 'Quitaste la marca: la captura que había ya no casa con esta línea.', 'info');
       A.pintarPagina(); A.pintarPagina();
       if (P.recien !== null) { const j = P.recien; P.recien = null; requestAnimationFrame(() => requestAnimationFrame(() => { const el = $(`.lfila[data-i="${j}"]`); if (el) el.classList.add('pagada'); })); }
     }
     else if (a === 'explica') { P.explica = P.explica === i ? null : i; A.pintarPagina(); }
-    else if (a === 'verificar') A.pedirCodigo('Confirmas que llamaste al proveedor y que la cuenta nueva es suya.').then(() => { verificarCuentas(D.LUNES[i].p); P.explica = null; A.pintarPagina(); A.aviso('Cuenta verificada. Ya puedes marcar el pago.'); }).catch(() => {});
+    else if (a === 'verificar') A.pedirCodigo((c => ({ que: 'Cuenta nueva de ' + esc(prov(D.LUNES[i].p).nombre) + (c ? ' · ' + esc(etiq(c)) : ''), det: 'Confirmas que llamaste al proveedor a su número de siempre y que la cuenta es suya.' + (c && c.titular ? ' A nombre de ' + esc(c.titular) + '.' : ''), boton: 'Ya confirmé por teléfono' }))(cuentaDe(D.LUNES[i]))).then(() => { verificarCuentas(D.LUNES[i].p); P.explica = null; A.pintarPagina(); A.aviso('Cuenta verificada. Ya puedes marcar el pago.'); }).catch(() => {});
     else if (a === 'duda') { P.dudas[b.dataset.d] = b.dataset.r; if (b.dataset.d === 'pollos') P.pollos = b.dataset.v; A.pintarPagina(); }
     else if (a === 'aprobar') {
       const q = cuadre(); const n = D.LUNES.filter(r => r.c).length;
       if (D.LUNES.some(faltaSocio)) { A.aviso('Di qué socio pagó en las líneas marcadas con SOCIO o APORTE antes de aprobar.', 'info'); return; }
-      const listo = nota => { P.aprobado = true; P.nota = nota || null; P.selloRecien = 'aprobado'; setTimeout(() => { P.selloRecien = null; }, 60); A.auditar({ modulo: 'Pagos de los lunes', registro: 'Lote del 5 oct', campo: 'estado', antes: 'preparado', despues: 'aprobado', motivo: nota ? 'Diferencia de ' + dinero(Math.abs(q.dif)) + ': ' + nota : '' }); A.pintarPagina(); A.aviso('Lote aprobado. Ahora puedes enviarlo.'); };
+      const listo = nota => {
+        P.aprobado = true; P.nota = nota || null; P.selloRecien = 'aprobado'; setTimeout(() => { P.selloRecien = null; }, 60);
+        P.aprobadoEn = { ...aprobacion(q.lista), firma: firmaLunes() }; P.reabierto = null; cierraReabierto('lunes');
+        A.auditar({ modulo: 'Pagos de los lunes', registro: 'Lote del 5 oct', campo: 'estado', antes: 'preparado', despues: 'aprobado · ' + dinero(q.lista), motivo: nota ? 'Diferencia de ' + dinero(Math.abs(q.dif)) + ': ' + nota : '' }); A.pintarPagina(); A.aviso('Lote aprobado. Ahora puedes enviarlo.');
+      };
       // si la lista menos lo que no se pagó no da la suma de las capturas, no se aprueba sin una nota
-      if (q.dif) A.pedirMotivo({ titulo: 'Aprobar el lote con una diferencia', texto: `La lista menos lo que no se pagó da <b>${dinero(q.lista)}</b> y las capturas suman <b>${dinero(q.caps)}</b>. Explica la diferencia de <b>${dinero(Math.abs(q.dif))}</b>: la nota sale en el PDF.`, etiqueta: 'Nota de la diferencia', boton: 'Aprobar el lote', codigo: true }).then(listo).catch(() => {});
-      else A.pedirCodigo('Apruebas el lote de ' + n + ' pagos.').then(() => listo(null)).catch(() => {});
+      if (q.dif) A.pedirMotivo({ titulo: 'Aprobar el lote con una diferencia', texto: `La lista menos lo que no se pagó da <b>${dinero(q.lista)}</b> y las capturas suman <b>${dinero(q.caps)}</b>. Explica la diferencia de <b>${dinero(Math.abs(q.dif))}</b>: la nota sale en el PDF.`, etiqueta: 'Nota de la diferencia', boton: 'Aprobar el lote', codigo: codigoLote(q, n) }).then(listo).catch(() => {});
+      else A.pedirCodigo(codigoLote(q, n)).then(() => listo(null)).catch(() => {});
     }
-    else if (a === 'enviar') A.pedirCodigo('Se envía el PDF al grupo «Comprobantes de pago». Las facturas de las líneas pagadas quedan pagadas.').then(() => { P.enviado = true; P.selloRecien = 'enviado'; setTimeout(() => { P.selloRecien = null; }, 60); A.auditar({ modulo: 'Pagos de los lunes', registro: 'Lote del 5 oct', campo: 'estado', antes: 'aprobado', despues: 'enviado' }); pagarLote(); A.pintarPagina(); A.aviso('Enviado al grupo. Las facturas pagadas quedaron cerradas. (Simulado)'); }).catch(() => {});
+    else if (a === 'enviar') {
+      if (!P.aprobado) return;
+      // al grupo solo sale lo que se aprobó: si el lote ya no es el de la firma, queda por aprobar otra vez
+      if (P.aprobadoEn.firma !== firmaLunes()) { P.reabierto = { ...P.aprobadoEn, reabrio: 'la app', horaReabrio: D.HOY.hora, motivo: 'el lote cambió después de aprobarlo' }; P.aprobado = false; P.aprobadoEn = null; P.nota = null; A.pintarPagina(); A.aviso('El lote cambió después de aprobarlo: no salió nada al grupo. Hay que aprobarlo otra vez.', 'info'); return; }
+      A.pedirCodigo({ que: 'Enviar el lote del lunes · ' + pagosTxt(D.LUNES.filter(r => r.c).length) + ' · ' + dinero(P.aprobadoEn.total), det: 'Va al grupo «Comprobantes de pago» con el PDF. Las facturas de las líneas pagadas quedan pagadas.', boton: 'Enviar al grupo' }).then(() => { P.enviado = true; P.selloRecien = 'enviado'; setTimeout(() => { P.selloRecien = null; }, 60); A.auditar({ modulo: 'Pagos de los lunes', registro: 'Lote del 5 oct', campo: 'estado', antes: 'aprobado', despues: 'enviado' }); pagarLote(); A.pintarPagina(); A.aviso('Enviado al grupo. Las facturas pagadas quedaron cerradas. (Simulado)'); }).catch(() => {});
+    }
+    else if (a === 'reabrir') reabrir('lunes');
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && P.menu !== null) { P.menu = null; A.pintarPagina(); } });
   // pagar la nómina: marcar persona por persona, verificar una cuenta nueva, aprobar y enviar (como los proveedores)
@@ -474,6 +556,8 @@
     const b = e.target.closest('[data-pn]');
     if (!b) { if (PN.menu !== null && !e.target.closest('.c-cuenta') && S.ruta === 'pagos') { PN.menu = null; A.pintarPagina(); } return; }
     const i = +b.dataset.i; const a = b.dataset.pn; const l = PNL()[i];
+    // aprobado, el pago no se toca: la cuenta de cada persona queda con candado
+    if (PN.aprobado && ['menu', 'pick'].includes(a)) { PN.menu = null; ACC['lote-cerrado']('nomina'); return; }
     if (a === 'menu') { PN.menu = PN.menu === i ? null : i; A.pintarPagina(); const f = $('.menu button'); if (f) f.focus(); }
     else if (a === 'pick') {
       const k = b.dataset.c || null; const antes = l.c; l.c = k; PN.menu = null; if (k && k !== antes) PN.recien = i;
@@ -481,31 +565,39 @@
       const soltada = k !== antes && (l.cap || l.capBs != null); if (soltada) { delete l.cap; delete l.capBs; }
       if (k !== antes && !DE_SOCIO.includes(k)) delete l.socio;
       A.auditar({ modulo: 'Pagar la nómina', registro: empDe(l.e).nombre, campo: 'sale de', antes: antes || 'sin pagar', despues: k || 'sin pagar' });
-      if (k !== antes) reAprobarNom();
       if (soltada) A.aviso(k ? 'La captura que había salió de ' + antes + ': ya no casa. Sube la de ' + k + '.' : 'Quitaste la marca: la captura que había ya no casa con este pago.', 'info');
       A.pintarPagina(); A.pintarPagina();
       if (PN.recien !== null) { const j = PN.recien; PN.recien = null; requestAnimationFrame(() => requestAnimationFrame(() => { const el = $(`.lfila[data-n="${j}"]`); if (el) el.classList.add('pagada'); })); }
     }
     else if (a === 'explica') { PN.explica = PN.explica === i ? null : i; A.pintarPagina(); }
-    else if (a === 'verificar') A.pedirCodigo('Confirmas que hablaste con ' + empDe(l.e).nombre + ' y que la cuenta nueva es suya.').then(() => { verificarCuentaEmp(l.e); PN.explica = null; A.pintarPagina(); A.aviso('Cuenta verificada. Ya puedes marcar el pago.'); }).catch(() => {});
+    else if (a === 'verificar') A.pedirCodigo({ que: 'Cuenta nueva de ' + esc(empDe(l.e).nombre) + ' · ' + esc(empDe(l.e).cuenta), det: 'Confirmas que hablaste con ' + esc(empDe(l.e).nombre.split(' ')[0]) + ' y que la cuenta es suya (' + aNombreDe(empDe(l.e)) + ').', boton: 'Ya confirmé con la persona' }).then(() => { verificarCuentaEmp(l.e); PN.explica = null; A.pintarPagina(); A.aviso('Cuenta verificada. Ya puedes marcar el pago.'); }).catch(() => {});
     else if (a === 'aprobar') {
       const q = cuadreNom(); const n = PNL().filter(x => x.c).length;
       if (PNL().some(faltaSocio)) { A.aviso('Di qué socio pagó en los pagos marcados con SOCIO o APORTE antes de aprobar.', 'info'); return; }
-      const listo = nota => { PN.aprobado = true; PN.nota = nota || null; PN.selloRecien = 'aprobado'; setTimeout(() => { PN.selloRecien = null; }, 60); A.auditar({ modulo: 'Pagar la nómina', registro: 'Nómina del ' + D.PAGO_NOMINA.corto, campo: 'estado', antes: 'por aprobar', despues: 'aprobada', motivo: nota ? 'Diferencia de ' + dinero(Math.abs(q.dif)) + ': ' + nota : '' }); A.pintarPagina(); A.aviso('Pago aprobado. Ahora puedes enviarlo.'); };
+      const listo = nota => {
+        PN.aprobado = true; PN.nota = nota || null; PN.selloRecien = 'aprobado'; setTimeout(() => { PN.selloRecien = null; }, 60);
+        PN.aprobadoEn = { ...aprobacion(q.lista), firma: firmaNomina() }; PN.reabierto = null; cierraReabierto('nomina');
+        A.auditar({ modulo: 'Pagar la nómina', registro: 'Nómina del ' + D.PAGO_NOMINA.corto, campo: 'estado', antes: 'por aprobar', despues: 'aprobada · ' + dinero(q.lista), motivo: nota ? 'Diferencia de ' + dinero(Math.abs(q.dif)) + ': ' + nota : '' }); A.pintarPagina(); A.aviso('Pago aprobado. Ahora puedes enviarlo.');
+      };
       // si la lista menos lo que no se pagó no da la suma de las capturas, no se aprueba sin una nota
-      if (q.dif) A.pedirMotivo({ titulo: 'Aprobar el pago con una diferencia', texto: `La lista menos lo que no se pagó da <b>${dinero(q.lista)}</b> y las capturas suman <b>${dinero(q.caps)}</b>. Explica la diferencia de <b>${dinero(Math.abs(q.dif))}</b>: la nota sale en el PDF.`, etiqueta: 'Nota de la diferencia', boton: 'Aprobar el pago', codigo: true }).then(listo).catch(() => {});
-      else A.pedirCodigo('Apruebas ' + n + (n === 1 ? ' pago' : ' pagos') + ' de la nómina.').then(() => listo(null)).catch(() => {});
+      if (q.dif) A.pedirMotivo({ titulo: 'Aprobar el pago con una diferencia', texto: `La lista menos lo que no se pagó da <b>${dinero(q.lista)}</b> y las capturas suman <b>${dinero(q.caps)}</b>. Explica la diferencia de <b>${dinero(Math.abs(q.dif))}</b>: la nota sale en el PDF.`, etiqueta: 'Nota de la diferencia', boton: 'Aprobar el pago', codigo: codigoNom(q, n) }).then(listo).catch(() => {});
+      else A.pedirCodigo(codigoNom(q, n)).then(() => listo(null)).catch(() => {});
     }
-    // al enviar, le avisamos a Andreina: ella no ve Pagos
-    else if (a === 'enviar') A.pedirCodigo('Se envía el PDF al grupo «Pagos al Personal».').then(() => {
-      const q = cuadreNom(); PN.enviado = true; PN.selloRecien = 'enviado'; setTimeout(() => { PN.selloRecien = null; }, 60);
-      A.auditar({ modulo: 'Pagar la nómina', registro: 'Nómina del ' + D.PAGO_NOMINA.corto, campo: 'estado', antes: 'aprobada', despues: 'enviada' });
-      D.PENDIENTES.unshift({ id: 'pe' + Date.now(), para: ['andreina'], tipo: 'info', titulo: 'Salió el pago de la nómina del ' + D.PAGO_NOMINA.corto, sub: 'El PDF llegó a «Pagos al Personal»' + (q.sin.length ? ' · quedan ' + q.sin.length + ' por pagar' : '') + ' · faltan los recibos firmados', de: 'La app', edad: 'Ahora', ir: 'nomina', sub2: 'recibos' });
-      A.pintarPagina(); A.aviso('Enviado al grupo. Le avisamos a Andreina. (Simulado)');
-    }).catch(() => {});
+    // al enviar, le avisamos a Andreina: ella no ve Pagos · al grupo solo sale lo que se aprobó
+    else if (a === 'enviar') {
+      if (!PN.aprobado) return;
+      if (PN.aprobadoEn.firma !== firmaNomina()) { PN.reabierto = { ...PN.aprobadoEn, reabrio: 'la app', horaReabrio: D.HOY.hora, motivo: 'la lista cambió después de aprobarla' }; PN.aprobado = false; PN.aprobadoEn = null; PN.nota = null; A.pintarPagina(); A.aviso('La lista cambió después de aprobarla: no salió nada al grupo. Hay que aprobarla otra vez.', 'info'); return; }
+      A.pedirCodigo({ que: 'Enviar el pago de la nómina del ' + esc(D.PAGO_NOMINA.corto) + ' · ' + pagosTxt(PNL().filter(x => x.c).length) + ' · ' + dinero(PN.aprobadoEn.total), det: 'Va al grupo «Pagos al Personal» con el PDF. Le avisamos a Andreina.', boton: 'Enviar al grupo' }).then(() => {
+        const q = cuadreNom(); PN.enviado = true; PN.selloRecien = 'enviado'; setTimeout(() => { PN.selloRecien = null; }, 60);
+        A.auditar({ modulo: 'Pagar la nómina', registro: 'Nómina del ' + D.PAGO_NOMINA.corto, campo: 'estado', antes: 'aprobada', despues: 'enviada' });
+        D.PENDIENTES.unshift({ id: 'pe' + Date.now(), para: ['andreina'], tipo: 'info', titulo: 'Salió el pago de la nómina del ' + D.PAGO_NOMINA.corto, sub: 'El PDF llegó a «Pagos al Personal»' + (q.sin.length ? ' · quedan ' + q.sin.length + ' por pagar' : '') + ' · faltan los recibos firmados', de: 'La app', edad: 'Ahora', ir: 'nomina', sub2: 'recibos' });
+        A.pintarPagina(); A.aviso('Enviado al grupo. Le avisamos a Andreina. (Simulado)');
+      }).catch(() => {});
+    }
+    else if (a === 'reabrir') reabrir('nomina');
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && PN.menu !== null) { PN.menu = null; A.pintarPagina(); } });
-  ACC['linea-nueva'] = () => A.aviso('Jose puede agregar o quitar líneas antes de pagar; queda el motivo. (Simulado)', 'info');
+  ACC['linea-nueva'] = () => P.aprobado ? ACC['lote-cerrado']('lunes') : A.aviso('Jose puede agregar o quitar líneas antes de aprobar el lote; queda el motivo. (Simulado)', 'info');
   FICHAS.lineapago = i => {
     // las facturas que cubre: las abiertas y, si el lote ya salió, las que pagó (con lo que debían antes de pagarse)
     const r = D.LUNES[i]; const pv = prov(r.p); const facts = facturasDe(r);
@@ -521,25 +613,28 @@
     const filas = (retIva || retIslr ? [{ l: 'Facturas', v: dinero(brutas) }] : [])
       .concat(retIva ? [{ l: '− Retención de IVA', v: `− ${dinero(retIva)} <small class="tenue">se le paga al SENIAT</small>` }] : [])
       .concat(retIslr ? [{ l: '− Retención de ISLR', v: `− ${dinero(retIslr)} <small class="tenue">se le paga al SENIAT</small>` }] : []).concat([
-      { l: 'A pagar ($)', v: dinero(r.m) + (retIva || retIslr ? ` <small class="tenue">= facturas − ${retIva && retIslr ? 'retenciones' : 'retención'}</small>` : '') + (Math.abs(r.m - saldo) >= 0.005 ? ' ' + tag('Distinto de las facturas', 'aviso') : ''), campo: { k: 'm', tipo: 'dinero' } },
+      { l: 'A pagar ($)', v: dinero(r.m) + (retIva || retIslr ? ` <small class="tenue">= facturas − ${retIva && retIslr ? 'retenciones' : 'retención'}</small>` : '') + (Math.abs(r.m - saldo) >= 0.005 ? ' ' + tag('Distinto de las facturas', 'aviso') : ''), campo: { k: 'm', tipo: 'dinero', obligatorio: true } },
       { l: 'Moneda del pago', v: r.c ? `${monedaDe(r.c)} <small class="tenue">${enMoneda(r.c, r.m)}</small>` : 'Depende de la cuenta de donde salga' },
       ...(DE_SOCIO.includes(r.c) ? [{ l: 'Qué socio', v: r.socio ? esc(r.socio) : tag('Falta decir cuál', 'aviso'), campo: { k: 'socio', tipo: 'select', opciones: [['', 'Falta decir cuál']].concat(D.SOCIOS.map(s => [s.nombre, s.nombre])) } }] : []),
       ctaProv,
       { l: 'Comisión del banco', v: r.cap == null ? '—' : com ? dinero(com, 'bs') : BANCO_DE[r.c] ? 'Bs 0,00 <small class="tenue">mismo banco</small>' : 'No aplica' },
       { l: 'Captura casada', v: capTxt }]);
+    // con el lote aprobado la línea queda con candado: el monto, la cuenta, el socio, dividirla y quitarla, hasta tocar «Cambiar el lote»
+    const cerrado = P.aprobado && !P.enviado;
     return { titulo: pv.nombre, sub: 'Línea del lunes · ' + esc(r.f), mod: 'pagos', obj: r, registro: 'Línea ' + pv.nombre,
       tags: [[bloq(r) ? 'Cuenta por verificar' : r.c ? 'Pagado desde ' + r.c : 'Sin pagar', bloq(r) ? 'alerta' : r.c ? 'ok' : '']],
-      aviso: bloq(r) ? `<p class="nota alerta">${ic('candado', 's')}<span><b>Cuenta por verificar.</b> ${esc(c.nueva)}. Llama al proveedor a su número de siempre antes de pagarle.</span></p>` : '',
+      aviso: (bloq(r) ? `<p class="nota alerta">${ic('candado', 's')}<span><b>Cuenta por verificar.</b> ${esc(c.nueva)}. Llama al proveedor a su número de siempre antes de pagarle.</span></p>` : '')
+        + (cerrado && puede('pagos', 'editar') ? `<p class="nota gris">${ic('candado', 's')}<span><b>El lote está aprobado.</b> Para cambiar esta línea, toca «Cambiar el lote» en la lista.</span></p>` : ''),
       bloques: [
         { titulo: 'Facturas que cubre', html: `<ul class="lista">${facts.map(f => `<li><button class="fila" data-abrir="factura:${f.id}"><span class="lead${f.pago && f.pago.lote === LOTE ? ' ok' : ''}">${ic(f.pago && f.pago.lote === LOTE ? 'check' : 'archivo')}</span><span class="medio"><b>N.º ${esc(f.num)}</b><small>Vence ${esc(f.vence)}${retsDe(f) ? ` · ${dinero(f.monto)} − retención ${dinero(retsDe(f))}` : ''}${f.pago && f.pago.lote === LOTE ? (f.pago.parcial ? ` · pagada en parte: quedan ${dinero(f.saldo)}` : ' · pagada en este lote') : ''}</small></span><span class="monto">${dinero(saldoDelLote(f))}</span></button></li>`).join('')}</ul>` },
         { titulo: 'El pago', filas },
         pend.length ? { html: `<p class="nota aviso">${ic('alerta', 's')}<span>Falta emitir la retención de IVA de la factura N.º ${pend.map(f => `${esc(f.num)} (${f.retPend.pct} %, ≈ ${dinero(f.retPend.usd)})`).join(', ')}. Cuando se emita, baja de lo que se le paga.</span></p>` } : { oculto: true },
       ],
-      bloqueada: P.enviado, bloqueo: 'El lote ya salió al grupo: esta línea no se edita.',
-      acciones: P.enviado ? [] : [{ txt: 'Dividir en dos cuentas', acc: 'pronto', icono: 'mas', solo: 'editar' }, { txt: 'Quitar de la lista', acc: 'quitar-linea', arg: i, icono: 'anular', solo: 'editar' }],
-      alGuardar: cambios => { if (cambios.some(x => x.r.campo.k === 'cta') && bloq(r)) r.c = null; reAprobar(); } };
+      bloqueada: P.aprobado || P.enviado, bloqueo: P.enviado ? 'El lote ya salió al grupo: esta línea no se edita.' : 'El lote está aprobado: esta línea no se edita. Para cambiar algo, toca «Cambiar el lote» en la lista.',
+      acciones: P.enviado ? [] : [{ txt: 'Dividir en dos cuentas', acc: cerrado ? 'lote-cerrado' : 'pronto', arg: cerrado ? 'lunes' : undefined, icono: 'mas', solo: 'editar', bloq: cerrado }, { txt: 'Quitar de la lista', acc: cerrado ? 'lote-cerrado' : 'quitar-linea', arg: cerrado ? 'lunes' : i, icono: 'anular', solo: 'editar', bloq: cerrado }],
+      alGuardar: cambios => { if (cambios.some(x => x.r.campo.k === 'cta') && bloq(r)) r.c = null; } };
   };
-  ACC['quitar-linea'] = i => A.pedirMotivo({ titulo: 'Quitar de la lista', texto: 'La factura sigue abierta: solo sale de la lista de hoy.', boton: 'Quitar' }).then(m => { A.auditar({ modulo: 'Pagos de los lunes', registro: prov(D.LUNES[i].p).nombre, campo: 'lista', antes: 'en la lista', despues: 'quitada', motivo: m }); A.aviso('Quitada de la lista de hoy. (Simulado: la fila sigue para que la veas)'); A.cerrarFicha(); }).catch(() => {});
+  ACC['quitar-linea'] = i => P.aprobado ? ACC['lote-cerrado']('lunes') : A.pedirMotivo({ titulo: 'Quitar de la lista', texto: 'La factura sigue abierta: solo sale de la lista de hoy.', boton: 'Quitar' }).then(m => { A.auditar({ modulo: 'Pagos de los lunes', registro: prov(D.LUNES[i].p).nombre, campo: 'lista', antes: 'en la lista', despues: 'quitada', motivo: m }); A.aviso('Quitada de la lista de hoy. (Simulado: la fila sigue para que la veas)'); A.cerrarFicha(); }).catch(() => {});
   // una persona de la lista de la nómina: el monto viene de la nómina aprobada y no se edita aquí
   const soloSueldos = (titulo, sub) => ({ titulo, sub, mod: 'pagos', bloques: [{ html: `<p class="nota gris">${ic('candado', 's')}<span>El detalle por persona lo ven el dueño, RRHH y contabilidad.</span></p>` }] });
   FICHAS.pagonom = i => {
@@ -549,7 +644,8 @@
     const capTxt = cap != null ? `Sí · ref. ${refNom(+i)} · dice ${dinero(cap)}${l.capBs != null ? ` <small class="tenue">(${dinero(l.capBs, 'bs')})</small>` : ''}${distinta ? ' ' + tag('No cuadra', 'aviso') : ''}` : l.c ? tag('Falta la captura', 'aviso') : 'Todavía no';
     return { titulo: e.nombre, sub: 'Pagar la nómina · ' + (e.formal ? 'corrida formal' : 'corrida interna') + ' · N.º ' + (+i + 1) + ' del reporte', mod: 'pagos', obj: l, registro: 'Pago de nómina · ' + e.nombre,
       tags: [[bl ? 'Cuenta por verificar' : l.c ? 'Pagado desde ' + l.c : 'Sin pagar', bl ? 'alerta' : l.c ? 'ok' : '']],
-      aviso: bl ? `<p class="nota alerta">${ic('candado', 's')}<span><b>Cuenta por verificar.</b> ${esc(e.cuentaNueva)}. Confírmala con la persona antes de pagarle.</span></p>` : '',
+      aviso: (bl ? `<p class="nota alerta">${ic('candado', 's')}<span><b>Cuenta por verificar.</b> ${esc(e.cuentaNueva)}. Confírmala con la persona antes de pagarle.</span></p>` : '')
+        + (PN.aprobado && !PN.enviado && puede('pagos', 'editar') ? `<p class="nota gris">${ic('candado', 's')}<span><b>El pago está aprobado.</b> Para cambiar algo, toca «Cambiar el pago» en la lista.</span></p>` : ''),
       bloques: [
         { titulo: 'El pago', filas: [
           { l: 'A pagar ($)', v: dinero(m) + ' <small class="tenue">el neto de su recibo</small>' },
@@ -559,7 +655,7 @@
           { l: 'Comisión del banco', v: cap == null ? '—' : com ? dinero(com, 'bs') : BANCO_DE[l.c] ? 'Bs 0,00 <small class="tenue">mismo banco</small>' : 'No aplica' },
           { l: 'Captura casada', v: capTxt }] },
         { html: `<button class="enlace" data-abrir="recibo:${e.id}">Ver su recibo ${ic('derecha', 's')}</button><p class="muted">El monto sale de la nómina aprobada: si está mal, se corrige en la nómina, no aquí. La captura se casa con la persona por su cuenta, el titular y el monto.</p>` }],
-      bloqueada: PN.enviado, bloqueo: 'El pago ya salió al grupo: esta línea no se edita.' };
+      bloqueada: PN.aprobado || PN.enviado, bloqueo: PN.enviado ? 'El pago ya salió al grupo: esta línea no se edita.' : 'El pago está aprobado: esta línea no se edita. Para cambiar algo, toca «Cambiar el pago» en la lista.' };
   };
   FICHAS.capturas = id => {
     if (id === 'nomina') {
@@ -568,7 +664,7 @@
       const filas = PNL().map((l, i) => ({ l, i })).filter(x => x.l.c).map(({ l, i }) => { const e = empDe(l.e); const cap = capNom(l); const dif = cap != null && Math.abs(cap - netoDe(l)) >= 0.005;
         return { celdas: [`<b>${esc(e.nombre)}</b><small>${cap != null ? 'Ref. ' + refNom(i) + ' · ' : ''}desde ${l.c} · a ${esc(e.cuenta)}${familiar(e) ? ' (' + esc(e.titular.replace(/^Su /, 'su ')) + ')' : ''}</small>`, cap != null ? dinero(cap) : '—', cap == null ? tag('Falta la captura', 'aviso') : dif ? tag('No cuadra', 'aviso') : tag('Casada', 'ok')] }; });
       return { titulo: 'Capturas de la nómina', sub: 'Pagar la nómina · ' + qn.n + ' leídas', mod: 'pagos',
-        bloques: [{ html: A.tabla({ cols: [{ t: 'Captura', cls: 'p' }, { t: 'Monto', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas, vacio: 'Todavía no hay pagos marcados.' }) },
+        bloques: [{ html: A.tabla({ cols: [{ t: 'Captura', cls: 'p' }, { t: 'Monto', cls: 'r plata' }, { t: 'Estado', cls: 'e' }], filas, vacio: 'Todavía no hay pagos marcados.' }) },
           { html: '<p class="muted">De cada captura se lee la cuenta que recibe, el titular, la referencia y el monto, y se casa con la persona por la cuenta de su ficha. Un pago a la cuenta de un familiar se reconoce por el titular anotado en la ficha. Si la cuenta que recibe no es la de la persona, avisa.</p>' }] };
     }
     const q = cuadre(); const pl = pollos();
@@ -581,7 +677,7 @@
     filas.push({ celdas: ['<b>Traspaso de BVCA a BVCE</b><small>Ref. 00418822 · entre cuentas nuestras</small>', '—', P.dudas.traspaso ? tag('Aparte: no suma', '') : tag('Por revisar', 'aviso')] });
     filas.push({ celdas: ['<b>Línea del estado de cuenta</b><small>Una comisión del banco: no es un pago</small>', '—', tag('Separada', '')] });
     return { titulo: 'Capturas del lote', sub: 'Pagos de los lunes · ' + leidas(q) + ' leídas', mod: 'pagos',
-      bloques: [{ html: A.tabla({ cols: [{ t: 'Captura', cls: 'p' }, { t: 'Monto', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas }) },
+      bloques: [{ html: A.tabla({ cols: [{ t: 'Captura', cls: 'p' }, { t: 'Monto', cls: 'r plata' }, { t: 'Estado', cls: 'e' }], filas }) },
         { html: '<p class="muted">De cada captura se lee: beneficiario, cuenta que recibe, referencia, monto y comisión. Se separan las líneas del estado de cuenta y las pantallas que no son pagos; una planilla del SENIAT entra como pago de impuesto desde la cuenta de la empresa, con su número de planilla. Si la cuenta de origen de la captura no es la que marcaste, avisa.</p><p class="muted">Un pago a otra cuenta del proveedor, o a nombre de otra persona, se reconoce con las cuentas de su ficha.</p>' }] };
   };
   FICHAS.pdf = id => {
@@ -647,13 +743,13 @@
     let b = el ? el.textContent.replace(/\s+/g, ' ').trim().replace(/^(Descargar|Exportar)\s*/i, '') : '';
     b = !b ? 'el archivo' : /^(el|la|los|las)\s/i.test(b) ? b : 'el ' + b;
     const sb = $('#main .subnav [aria-current="true"]');
-    const sub = sb ? [...sb.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim() : '';
+    const sub = sb ? (sb.querySelector('.sn-largo') ? sb.querySelector('.sn-largo').textContent : [...sb.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('')).trim() : '';
     const donde = S.ficha && S.ficha.spec ? S.ficha.spec.titulo : [(PANT[S.ruta] || {}).titulo, sub].filter(Boolean).join(' › ');
     return b + (donde ? ' · ' + donde : '');
   }
   ACC.descargar = (arg, el) => {
     const que = queSeBaja(arg, el);
-    A.pedirCodigo('Descargar ' + que + '. Queda anotado en el registro de accesos.').then(() => {
+    A.pedirCodigo({ que: 'Descargar ' + esc(que), det: 'Queda anotado en el registro de accesos.', boton: 'Descargar' }).then(() => {
       D.ACCESOS.unshift({ cuando: 'Hoy ' + D.HOY.hora, quien: S.usuario.nombre, que: 'Descargó ' + que + ' (con código)', donde: 'Este equipo' });
       A.aviso('Descarga lista y anotada en el registro de accesos. (Simulado)');
     }).catch(() => {});
@@ -661,7 +757,8 @@
 
   /* =============== PROVEEDORES Y FACTURAS =============== */
   PANT.proveedores = {
-    titulo: 'Proveedores y facturas', corto: 'Proveedores', tab: 'Proveedores', grupo: 'Dinero que sale', icono: 'proveedores', mod: 'proveedores',
+    titulo: 'Proveedores y facturas', corto: 'Proveedores', tab: 'Proveedores', grupo: 'Dinero que sale', icono: 'proveedores', mod: 'proveedores', palabras: 'cuentas por pagar compras',
+    secciones: [['facturas', 'Facturas', 'factura deuda vencida'], ['proveedores', 'Lista de proveedores', 'rif cuenta bancaria'], ['ajustes', 'Correcciones a Odoo', 'ajuste ajustes corregir'], ['devoluciones', 'Devoluciones', 'reposicion merma']],
     render: (sub = 'facturas') => {
       const abiertas = D.FACTURAS.filter(f => f.saldo > 0);
       const deuda = abiertas.reduce((s, f) => s + f.saldo, 0);
@@ -671,20 +768,20 @@
         const f = A.filtroActual('abiertas');
         const lista = D.FACTURAS.filter(x => f === 'todas' || (f === 'abiertas' && x.saldo > 0) || x.estado === f || (f === 'vencidas' && x.estado === 'vencida'));
         const porRevisar = D.FAC_AGENTE.filter(x => x.estado === 'propuesta').length;
-        cuerpo = (porRevisar ? `<p class="nota info">${ic('archivo', 's')}<span>El agente leyó ${porRevisar} ${porRevisar === 1 ? 'foto de factura' : 'fotos de facturas'}. No entran a esta lista hasta que Jose o Alejandro las revisen. <button class="enlace" data-abrir="facagente:lote">Revisarlas ${ic('derecha', 's')}</button></span></p>` : '') + A.filtros('t-fac', [['abiertas', 'Por pagar', abiertas.length], ['vencida', 'Vencidas', vencidas.length], ['ajustada', 'Ajustadas', D.FACTURAS.filter(x => x.estado === 'ajustada').length], ['pagada', 'Pagadas'], ['todas', 'Todas']], f, 'Buscar factura o proveedor') +
-          A.tabla({ id: 't-fac', cols: [{ t: 'Factura', cls: 'p' }, { t: 'Proveedor', cls: 'x' }, { t: 'Fecha', cls: 'x' }, { t: 'Vence', cls: 'x' }, { t: 'Saldo', cls: 'r' }, { t: 'Estado', cls: 'e' }],
+        cuerpo = (porRevisar ? `<p class="nota info">${ic('archivo', 's')}<span>El agente leyó ${porRevisar} ${porRevisar === 1 ? 'foto de factura' : 'fotos de facturas'}. No entran a esta lista hasta que Jose o Alejandro las revisen. <button class="enlace" data-abrir="facagente:lote">Revisarlas ${ic('derecha', 's')}</button></span></p>` : '') + A.filtros('t-fac', [['abiertas', 'Por pagar', abiertas.length], ['vencida', 'Vencidas', vencidas.length], ['ajustada', 'Corregidas', D.FACTURAS.filter(x => x.estado === 'ajustada').length], ['pagada', 'Pagadas'], ['todas', 'Todas']], f, 'Buscar factura o proveedor') +
+          A.tabla({ id: 't-fac', cols: [{ t: 'Factura', cls: 'p' }, { t: 'Proveedor', cls: 'x' }, { t: 'Fecha', cls: 'x' }, { t: 'Vence', cls: 'x' }, { t: 'Saldo', cls: 'r plata' }, { t: 'Estado', cls: 'e' }],
             filas: lista.map(x => ({ abrir: 'factura:' + x.id, clase: x.anulada ? 'anulada' : '', txt: prov(x.prov).nombre, celdas: [`<b>N.º ${esc(x.num)}</b><small>${esc(prov(x.prov).nombre)}${x.alerta ? ' · ' + ic('alerta', 'xs') + ' ' + esc(x.alerta) : ''}</small>`, esc(prov(x.prov).nombre), esc(x.fecha), esc(x.vence), dinero(x.saldo), A.estadoTag(x.estado)] })) });
       }
-      if (sub === 'proveedores') cuerpo = A.filtros('t-prov', null, null, 'Buscar proveedor, RIF o categoría') + A.tabla({ id: 't-prov', cols: [{ t: 'Proveedor', cls: 'p' }, { t: 'Categoría', cls: 'x' }, { t: 'Plazo', cls: 'x' }, { t: 'Cuenta', cls: 'x' }, { t: 'Deuda', cls: 'r' }, { t: 'Estado', cls: 'e' }],
+      if (sub === 'proveedores') cuerpo = A.filtros('t-prov', null, null, 'Buscar proveedor, RIF o categoría') + A.tabla({ id: 't-prov', cols: [{ t: 'Proveedor', cls: 'p' }, { t: 'Categoría', cls: 'x' }, { t: 'Plazo', cls: 'x' }, { t: 'Cuenta', cls: 'x' }, { t: 'Deuda', cls: 'r plata' }, { t: 'Estado', cls: 'e' }],
         filas: D.PROVEEDORES.map(p => { const a = activas(p); const c = a[0];
           return { abrir: 'proveedor:' + p.id, txt: p.rif + ' ' + p.cat + ' ' + p.cuentas.map(x => x.titular).join(' '), celdas: [`<b>${esc(p.nombre)}</b><small>${esc(p.rif)}</small>`, esc(p.cat), p.plazo ? p.plazo + ' días' : 'De contado', c ? esc(etiq(c)) + (c.nueva ? ' (nueva)' : '') + (a.length > 1 ? ` <small class="tenue">y ${a.length - 1} más</small>` : '') : '—', dinero(deudaDe(p.id)), A.estadoTag(p.estado)] }; }) });
       if (sub === 'ajustes') {
         const aj = D.AUDITORIA.filter(a => a.modulo === 'Proveedores');
-        cuerpo = `<p class="nota info">${ic('info', 's')}<span>Jose corrige facturas y cuentas solo aquí. Queda el valor de Odoo, el nuevo, el motivo y quién lo hizo. La copia de Odoo nunca pisa un ajuste: si Odoo cambia ese dato después, aparece un aviso y Jose decide.</span></p>` +
+        cuerpo = `<p class="nota info">${ic('info', 's')}<span>Las facturas y las cuentas que vienen de Odoo se corrigen solo aquí. Queda el valor de Odoo, el nuevo, el motivo y quién lo hizo. La copia de Odoo nunca pisa una corrección: si Odoo cambia ese dato después, aparece un aviso y quien la hizo decide.</span></p>` +
           A.tabla({ cols: [{ t: 'Qué se cambió', cls: 'p' }, { t: 'Antes', cls: 'x' }, { t: 'Después', cls: 'r' }, { t: 'Quién', cls: 'e' }], filas: aj.map(a => ({ abrir: 'cambio:' + a.id, celdas: [`<b>${esc(a.registro)} · ${esc(a.campo)}</b><small>${esc(a.motivo)}</small>`, esc(a.antes), esc(a.despues), esc(a.quien) + '<br><small class="muted">' + esc(a.cuando) + '</small>'] })) });
       }
       if (sub === 'devoluciones') cuerpo = `<p class="nota info">${ic('info', 's')}<span>Mercancía mala que se devuelve. Cada proveedor tiene su trato (por ejemplo, repone la mitad y el resto es merma). Si pasan 3 días sin reponer, avisa a Jose y a Manuel.</span></p>` +
-        A.tabla({ cols: [{ t: 'Devolución', cls: 'p' }, { t: 'Trato', cls: 'x' }, { t: 'Monto', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas: D.DEVOLUCIONES.map(d => ({ abrir: 'devolucion:' + d.id, celdas: [`<b>${esc(d.que)}</b><small>${esc(prov(d.prov).nombre)} · ${esc(d.fecha)}</small>`, esc(d.trato), dinero(d.monto), A.estadoTag(d.estado) + (d.dias ? ` <small class="muted">${d.dias} días</small>` : '')] })) });
+        A.tabla({ cols: [{ t: 'Devolución', cls: 'p' }, { t: 'Trato', cls: 'x' }, { t: 'Monto', cls: 'r plata' }, { t: 'Estado', cls: 'e' }], filas: D.DEVOLUCIONES.map(d => ({ abrir: 'devolucion:' + d.id, celdas: [`<b>${esc(d.que)}</b><small>${esc(prov(d.prov).nombre)} · ${esc(d.fecha)}</small>`, esc(d.trato), dinero(d.monto), A.estadoTag(d.estado) + (d.dias ? ` <small class="muted">${d.dias} días</small>` : '')] })) });
       return `<div class="pagina">${A.cab('Cuentas por pagar', 'Proveedores y facturas', 'Las facturas se copian de Odoo (hoy, a mano los domingos). Aquí se ven, se corrigen con motivo y se pagan el lunes.', A.boton('proveedores', 'Nuevo proveedor', 'data-acc="pronto"', { tono: 'sec', icono: 'mas' }))}
         ${A.lectura('proveedores')}
         <div class="cifras">
@@ -693,7 +790,7 @@
           ${A.cifra({ etq: 'Facturas sin número de control', valor: '2', sub: 'se retiene el 100 % del IVA', tono: 'aviso', abrir: 'factura:f6' })}
           ${A.cifra({ etq: 'Esperando reposición', valor: D.DEVOLUCIONES.filter(d => d.estado === 'esperando').length, sub: 'queso telita · 4 días', ir: 'proveedores/devoluciones' })}
         </div>
-        ${A.subnav([['facturas', 'Facturas', abiertas.length, true], ['proveedores', 'Proveedores', D.PROVEEDORES.length, true], ['ajustes', 'Ajustes de Jose'], ['devoluciones', 'Devoluciones', D.DEVOLUCIONES.filter(d => d.estado === 'esperando').length]], sub)}
+        ${A.subnav([['facturas', 'Facturas', abiertas.length, true], ['proveedores', 'Proveedores', D.PROVEEDORES.length, true], ['ajustes', 'Correcciones a Odoo'], ['devoluciones', 'Devoluciones', D.DEVOLUCIONES.filter(d => d.estado === 'esperando').length]], sub)}
         ${cuerpo}</div>`;
     },
   };
@@ -707,7 +804,7 @@
       .concat(f.retIslr ? [{ l: 'Retención de ISLR (' + f.retIslr.pct + ' %)', v: `− ${dinero(f.retIslr.usd)} <small class="tenue">${dinero(f.retIslr.bs, 'bs')} a ${fmt(f.retIslr.tasa)}</small> ${enlaceRet(f.retIslr)}` }] : []);
     const pagoTl = f.pago ? [[f.pago.lote, `${f.pago.parcial ? 'Pagada en parte' : 'Pagada'} en el lote del lunes ${esc(f.pago.lote)} ${esc(desdeTxt(f.pago))}${f.pago.parcial ? `: quedan ${dinero(f.saldo)}, porque la captura dijo menos.` : '.'}`, f.pago.parcial ? 'aviso' : 'ok']] : [];
     const bloques = [
-      { titulo: 'Datos', filas: [{ l: 'Proveedor', v: `<button class="enlace" data-abrir="proveedor:${pv.id}">${esc(pv.nombre)}</button>` }, { l: 'Número', v: esc(f.num) }, { l: 'Número de control', v: esc(f.control), campo: { k: 'control', tipo: 'texto' } }, { l: 'Fecha', v: esc(f.fecha) }, { l: 'Vence', v: esc(f.vence), campo: { k: 'vence', tipo: 'texto' } }, { l: 'Monto ($)', v: dinero(f.monto) + (f.ajuste ? `<span class="cambio"><s>${dinero(f.ajuste.antes)}</s> en Odoo</span>` : ''), campo: { k: 'monto', tipo: 'dinero' } }, ...ret, { l: 'Saldo', v: dinero(f.saldo) + (retsDe(f) && f.saldo > 0 && !f.pago ? ' <small class="tenue">lo que se le paga al proveedor</small>' : f.pago && f.pago.parcial ? ' <small class="tenue">lo que falta pagarle</small>' : '') }, ...(f.pago ? [{ l: 'Se pagó', v: `En el lote del ${esc(f.pago.lote)} · <span class="acct" data-c="${esc(f.pago.cta)}">${esc(f.pago.cta)}</span>${f.pago.socio ? ' · ' + esc(f.pago.socio) : ''}` }] : []), { l: 'Viene de', v: esc(f.origen) + ' · importada el dom 4 oct' }] },
+      { titulo: 'Datos', filas: [{ l: 'Proveedor', v: `<button class="enlace" data-abrir="proveedor:${pv.id}">${esc(pv.nombre)}</button>` }, { l: 'Número', v: esc(f.num) }, { l: 'Número de control', v: esc(f.control), campo: { k: 'control', tipo: 'texto' } }, { l: 'Fecha', v: esc(f.fecha) }, { l: 'Vence', v: esc(f.vence), campo: { k: 'vence', tipo: 'texto' } }, { l: 'Monto ($)', v: dinero(f.monto) + (f.ajuste ? `<span class="cambio"><s>${dinero(f.ajuste.antes)}</s> en Odoo</span>` : ''), campo: { k: 'monto', tipo: 'dinero', obligatorio: true } }, ...ret, { l: 'Saldo', v: dinero(f.saldo) + (retsDe(f) && f.saldo > 0 && !f.pago ? ' <small class="tenue">lo que se le paga al proveedor</small>' : f.pago && f.pago.parcial ? ' <small class="tenue">lo que falta pagarle</small>' : '') }, ...(f.pago ? [{ l: 'Se pagó', v: `En el lote del ${esc(f.pago.lote)} · <span class="acct" data-c="${esc(f.pago.cta)}">${esc(f.pago.cta)}</span>${f.pago.socio ? ' · ' + esc(f.pago.socio) : ''}` }] : []), { l: 'Viene de', v: esc(f.origen) + ' · importada el dom 4 oct' }] },
       { titulo: 'Historial', tiempo: [[f.fecha, 'Se registró en Odoo.']].concat(f.ajuste ? [[f.ajuste.cuando.split(' ').slice(0, 3).join(' '), `Ajuste de ${esc(f.ajuste.quien)}: ${esc(f.ajuste.campo.toLowerCase())} ${dinero(f.ajuste.antes)} → ${dinero(f.ajuste.despues)}. «${esc(f.ajuste.motivo)}»`, 'info']] : []).concat(f.ret ? [[f.ret.fecha, `Retención de IVA de ${dinero(f.ret.bs, 'bs')}: se le paga al SENIAT y baja el saldo.`, 'info']] : []).concat(f.retIslr ? [[f.retIslr.fecha, `Retención de ISLR de ${dinero(f.retIslr.bs, 'bs')}: se le paga al SENIAT y baja el saldo.`, 'info']] : []).concat(pagoTl) },
       { titulo: 'Archivo', adjuntos: [pv.nombre + ' ' + f.num + '.jpg'] },
       conPago ? { html: `<p class="muted">${pagada ? 'Una factura pagada' : 'Una factura con un pago'} ya no se edita. Si algo está mal, se corrige con un reverso enlazado a ella: una nota de crédito del proveedor o el pago que se devolvió.</p>` } : { oculto: true },
@@ -732,7 +829,7 @@
     if (id === 'lote') {
       const pend = FA().filter(x => x.estado === 'propuesta').length;
       return { titulo: 'Facturas leídas por el agente', sub: 'agente-facturas · leídas ' + esc(FA()[0].leida.toLowerCase()), mod: 'proveedores', tags: [[pend ? pend + ' por revisar' : 'Revisadas', pend ? 'aviso' : 'ok']],
-        bloques: [{ html: A.tabla({ cols: [{ t: 'Factura', cls: 'p' }, { t: 'Monto', cls: 'r' }, { t: 'Estado', cls: 'e' }], filas: FA().map(x => ({ abrir: 'facagente:' + x.id, celdas: [`<b>${esc(prov(x.prov).nombre)} · N.º ${esc(x.num)}</b><small>${esc(x.fecha)}${dudaViva(x) && x.estado === 'propuesta' ? ' · ' + esc(x.repetida ? 'repetida' : 'revisa el monto') : ''}</small>`, dinero(x.monto), tag(...FA_ESTADO[x.estado])] })) }) },
+        bloques: [{ html: A.tabla({ cols: [{ t: 'Factura', cls: 'p' }, { t: 'Monto', cls: 'r plata' }, { t: 'Estado', cls: 'e' }], filas: FA().map(x => ({ abrir: 'facagente:' + x.id, celdas: [`<b>${esc(prov(x.prov).nombre)} · N.º ${esc(x.num)}</b><small>${esc(x.fecha)}${dudaViva(x) && x.estado === 'propuesta' ? ' · ' + esc(x.repetida ? 'repetida' : 'revisa el monto') : ''}</small>`, dinero(x.monto), tag(...FA_ESTADO[x.estado])] })) }) },
           { html: '<p class="muted">El agente lee las fotos de las facturas y las propone. Nunca aprueba: ninguna entra a las facturas por pagar hasta que Jose o Alejandro la revisen. Toca una para aprobarla, corregirla o rechazarla.</p>' }] };
     }
     const x = FA().find(z => z.id === id); const pv = prov(x.prov); const abierta = x.estado === 'propuesta';
@@ -747,7 +844,7 @@
           { l: 'Número de control', v: esc(x.control) + leido('control', esc), campo: { k: 'control', tipo: 'texto' } },
           { l: 'Fecha', v: esc(x.fecha) + leido('fecha', esc), campo: { k: 'fecha', tipo: 'texto' } },
           { l: 'Vence', v: esc(x.vence) + ` <small class="tenue">${pv.plazo ? 'plazo de ' + pv.plazo + ' días' : 'de contado'}</small>` },
-          { l: 'Monto ($)', v: dinero(x.monto) + leido('monto', v => dinero(v)), campo: { k: 'monto', tipo: 'dinero' } }]
+          { l: 'Monto ($)', v: dinero(x.monto) + leido('monto', v => dinero(v)), campo: { k: 'monto', tipo: 'dinero', obligatorio: true } }]
           .concat(x.lectura ? [{ l: 'Cómo la leyó', v: esc(x.lectura), largo: true }] : [])
           .concat(rep ? [{ l: 'Ya está como', v: `<button class="enlace" data-abrir="factura:${rep.id}">factura N.º ${esc(rep.num)}</button> <small class="tenue">copia de Odoo</small>` }] : []) },
         { html: abierta ? `<p class="muted">Si leyó mal un dato, corrígelo antes de aprobarla: queda lo leído tachado al lado. Al aprobarla pasa a las facturas por pagar con su foto, a nombre de quien la aprobó.</p>`
@@ -759,7 +856,7 @@
   const facagListo = () => { if (FA().every(x => x.estado !== 'propuesta')) D.PENDIENTES.filter(p => p.abrir === 'facagente:lote' && !p.hecho).forEach(p => { p.hecho = 'Revisadas por ' + S.usuario.nombre; }); };
   ACC['facag-aprobar'] = id => {
     const x = FA().find(z => z.id === id); const pv = prov(x.prov);
-    const aprobar = () => A.pedirCodigo('Aprobar la factura N.º ' + x.num + ' de ' + pv.nombre + ' por ' + dinero(x.monto) + '.').then(() => {
+    const aprobar = () => A.pedirCodigo({ que: 'Factura N.º ' + esc(x.num) + ' de ' + esc(pv.nombre) + ' · ' + dinero(x.monto), det: 'Leída por el agente. Pasa a las facturas por pagar, con su foto.', boton: 'Aprobar ' + dinero(x.monto) }).then(() => {
       x.estado = 'aprobada'; x.reviso = S.usuario.nombre; facagListo();
       A.auditar({ modulo: 'Proveedores y facturas', registro: 'Factura leída ' + x.num, campo: 'estado', antes: 'propuesta por el agente', despues: 'aprobada · ' + dinero(x.monto) });
       A.pintarFicha(); A.pintarPagina(); A.aviso('Aprobada. Pasa a las facturas por pagar con su foto. (Simulado)');
@@ -779,7 +876,7 @@
   ACC['fac-reverso'] = id => {
     const f = D.FACTURAS.find(x => x.id === id);
     const pagada = f.estado === 'pagada';
-    A.pedirMotivo({ titulo: 'Corregir con un reverso', texto: `La factura N.º ${esc(f.num)} ${pagada ? 'sigue pagada' : 'queda con su pago'} y no se toca. Se registra un movimiento al revés, enlazado a ella: una nota de crédito del proveedor o el pago que se devolvió.`, etiqueta: 'Qué hay que corregir', boton: 'Registrar el reverso', codigo: true }).then(m => {
+    A.pedirMotivo({ titulo: 'Corregir con un reverso', texto: `La factura N.º ${esc(f.num)} ${pagada ? 'sigue pagada' : 'queda con su pago'} y no se toca. Se registra un movimiento al revés, enlazado a ella: una nota de crédito del proveedor o el pago que se devolvió.`, etiqueta: 'Qué hay que corregir', boton: 'Registrar el reverso', codigo: { que: 'Reverso de la factura N.º ' + esc(f.num) + ' · ' + esc(prov(f.prov).nombre), det: 'Queda enlazado a la factura, que no se toca.', boton: 'Registrar el reverso' } }).then(m => {
       A.auditar({ modulo: 'Proveedores', registro: 'Factura ' + f.num, campo: 'reverso', antes: pagada ? 'pagada' : 'con un pago', despues: 'reverso enlazado', motivo: m });
       A.aviso('Reverso registrado y enlazado a la factura, que queda como estaba. (Simulado)');
     }).catch(() => {});
@@ -791,7 +888,7 @@
     return { titulo: p.nombre, sub: esc(p.cat) + ' · ' + esc(p.rif), mod: 'proveedores', obj: p, registro: p.nombre, tags: [[A.estadoTag(p.estado).replace(/<[^>]+>/g, ''), p.estado === 'cuenta_nueva' ? 'alerta' : p.estado === 'vencida' ? 'alerta' : 'ok']],
       aviso: nueva ? `<p class="nota alerta">${ic('candado', 's')}<span><b>Cuenta por verificar.</b> ${esc(nueva.nueva)} y le avisó a Alejandro. Queda así hasta que alguien confirme por teléfono.</span></p>` : '',
       bloques: [
-        { titulo: 'Ficha', filas: [{ l: 'Nombre', v: esc(p.nombre), campo: { k: 'nombre', tipo: 'texto' } }, { l: 'Categoría', v: esc(p.cat), campo: { k: 'cat', tipo: 'select', opciones: D.PARAMS.categorias } }, { l: 'Plazo para pagar (días)', v: p.plazo ? p.plazo + ' días' : 'De contado', campo: { k: 'plazo', tipo: 'numero' } }, { l: 'Contacto', v: esc(p.contacto), campo: { k: 'contacto', tipo: 'texto' } }] },
+        { titulo: 'Ficha', filas: [{ l: 'Nombre', v: esc(p.nombre), campo: { k: 'nombre', tipo: 'texto' } }, { l: 'Categoría', v: esc(p.cat), campo: { k: 'cat', tipo: 'select', opciones: D.PARAMS.categorias } }, { l: 'Plazo para pagar (días)', v: p.plazo ? p.plazo + ' días' : 'De contado', campo: { k: 'plazo', tipo: 'numero', entero: true } }, { l: 'Contacto', v: esc(p.contacto), campo: { k: 'contacto', tipo: 'texto' } }] },
         { titulo: 'Cuentas para pagarle (' + activas(p).length + ')', html: `<ul class="lista">${p.cuentas.map(filaCta).join('')}</ul><p class="muted">Un pago a cualquiera de estas cuentas, o a nombre de su titular, se reconoce como pago a ${esc(p.nombre)}. Agregar una cuenta pide tu código y le avisa a Alejandro.</p>` },
         { titulo: 'Facturas abiertas (' + facts.length + ')', html: facts.length ? `<ul class="lista">${facts.map(f => `<li><button class="fila" data-abrir="factura:${f.id}"><span class="lead">${ic('archivo')}</span><span class="medio"><b>N.º ${esc(f.num)}</b><small>Vence ${esc(f.vence)}${f.ret && f.retIslr ? ' · sin las retenciones' : f.ret ? ' · sin la retención de IVA' : f.retIslr ? ' · sin la retención de ISLR' : ''}${f.pago && f.pago.parcial ? ' · pagada en parte' : ''}</small></span><span class="monto">${dinero(f.saldo)}</span></button></li>`).join('')}</ul>` : '<p class="muted">Sin facturas abiertas.</p>' },
       ],
@@ -801,23 +898,23 @@
   ACC['prov-cuenta'] = id => {
     if (!puede('proveedores', 'editar')) return ACC['sin-permiso']('proveedores');
     const p = D.PROVEEDORES.find(x => x.id === id); const env = $('#modal-raiz');
-    env.innerHTML = `<div class="modal-env"><div class="modal" role="dialog" aria-modal="true"><h2>Agregar una cuenta</h2><p class="muted">${esc(p.nombre)}</p>
+    A.modal(`<h2 id="modal-t">Agregar una cuenta</h2><p class="muted" id="modal-d">${esc(p.nombre)}</p>
       <label class="campo" for="pc-banco"><span>Banco</span><select id="pc-banco">${['Venezolano', 'Banesco', 'Mercantil', 'Provincial', 'BNC', 'Bancaribe'].map(b => `<option>${b}</option>`).join('')}</select></label>
       <label class="campo" for="pc-num"><span>Número de cuenta (20 dígitos) o teléfono del pago móvil</span><input id="pc-num" inputmode="numeric" autocomplete="off"></label>
       <label class="campo" for="pc-tit"><span>Titular: el nombre que sale en el banco</span><input id="pc-tit" autocomplete="off" placeholder="Puede ser otra persona, por ejemplo el dueño"><small class="ayuda" id="pc-msg"></small></label>
       <p class="muted" style="display:flex;gap:6px;align-items:center">${ic('candado', 's')}Pide tu código y le avisa a Alejandro. No se le paga ahí hasta que alguien confirme por teléfono.</p>
-      <div class="modal-acc"><button class="btn sec" data-pc="no">Cancelar</button><button class="btn pri" data-pc="si">Agregar la cuenta</button></div></div></div>`;
+      <div class="modal-acc"><button class="btn sec" data-pc="no">Cancelar</button><button class="btn pri" data-pc="si">Agregar la cuenta</button></div>`, 'teclado');
     $('#pc-num').focus();
     env.onclick = e => {
       const b = e.target.closest('[data-pc]'); if (!b) return;
-      if (b.dataset.pc === 'no') { env.onclick = null; env.innerHTML = ''; return; }
+      if (b.dataset.pc === 'no') { A.cerrarModal(); return; }
       const dig = $('#pc-num').value.replace(/\D/g, ''); const tit = $('#pc-tit').value.trim(); const banco = $('#pc-banco').value;
       const movil = /^04\d{9}$/.test(dig);
       if (!movil && dig.length !== 20) { $('#pc-msg').textContent = 'Escribe los 20 dígitos de la cuenta o el teléfono del pago móvil.'; return; }
       if (tit.length < 3) { $('#pc-msg').textContent = 'Escribe el titular tal como sale en el banco.'; return; }
-      env.onclick = null; env.innerHTML = '';
+      A.cerrarModal();
       const num = movil ? 'pago móvil ' + dig.slice(0, 4) + '-•••-' + dig.slice(-4) : '•••• ' + dig.slice(-4);
-      A.pedirCodigo('Agregar la cuenta ' + banco + ' ' + num + ' a ' + p.nombre + '.').then(() => {
+      A.pedirCodigo({ que: 'Cuenta nueva para ' + esc(p.nombre) + ' · ' + esc(banco) + ' ' + esc(num), det: 'A nombre de ' + esc(tit) + '. No se le paga ahí hasta que alguien la confirme por teléfono.', boton: 'Agregar la cuenta' }).then(() => {
         const c = { banco, num, titular: tit, otro: !tit.toLowerCase().includes(p.nombre.toLowerCase().split(' (')[0]), nueva: S.usuario.nombre + ' la agregó hoy con su código' };
         p.cuentas.push(c); if (p.estado !== 'cuenta_nueva') p.estadoAntes = p.estado; p.estado = 'cuenta_nueva';
         A.auditar({ modulo: 'Proveedores', registro: p.nombre, campo: 'cuenta bancaria', antes: '—', despues: etiq(c) + ' · ' + tit, motivo: 'Cuenta nueva' });
@@ -833,7 +930,7 @@
     D.PENDIENTES.filter(x => x.prov === id && !x.hecho).forEach(x => { x.hecho = 'Verificada por ' + S.usuario.nombre; });
     A.auditar({ modulo: 'Proveedores', registro: p.nombre, campo: 'cuenta', antes: 'por verificar', despues: 'verificada por teléfono' });
   }
-  ACC['prov-verificar'] = id => A.pedirCodigo('Confirmas que llamaste al proveedor y que la cuenta nueva es suya.').then(() => { verificarCuentas(id); A.pintarFicha(); A.pintarPagina(); A.aviso('Cuenta verificada. Ya se le puede pagar ahí.'); }).catch(() => {});
+  ACC['prov-verificar'] = id => A.pedirCodigo((p => (c => ({ que: 'Cuenta nueva de ' + esc(p.nombre) + (c ? ' · ' + esc(etiq(c)) : ''), det: 'Confirmas que llamaste al proveedor a su número de siempre y que la cuenta es suya.' + (c ? ' A nombre de ' + esc(c.titular) + '.' : ''), boton: 'Ya confirmé por teléfono' }))(p.cuentas.find(x => x.nueva)))(D.PROVEEDORES.find(x => x.id === id))).then(() => { verificarCuentas(id); A.pintarFicha(); A.pintarPagina(); A.aviso('Cuenta verificada. Ya se le puede pagar ahí.'); }).catch(() => {});
   FICHAS.devolucion = id => {
     const d = D.DEVOLUCIONES.find(x => x.id === id);
     return { titulo: 'Devolución: ' + d.que, sub: esc(prov(d.prov).nombre) + ' · ' + esc(d.fecha), mod: 'proveedores', obj: d, registro: 'Devolución ' + d.que, tags: [[d.estado === 'esperando' ? 'Esperando reposición · ' + d.dias + ' días' : 'Repuesta', d.estado === 'esperando' ? 'aviso' : 'ok']],
@@ -843,6 +940,6 @@
   ACC.repuesta = id => { const d = D.DEVOLUCIONES.find(x => x.id === id); d.estado = 'repuesta'; d.dias = 0; const p = D.PENDIENTES.find(x => x.abrir === 'devolucion:' + id); if (p) p.hecho = 'Repuesta, marcada por ' + S.usuario.nombre; A.auditar({ modulo: 'Proveedores', registro: 'Devolución ' + d.que, campo: 'estado', antes: 'esperando', despues: 'repuesta' }); A.pintarFicha(); A.pintarPagina(); A.aviso('Marcada como repuesta.'); };
   FICHAS.cambio = id => {
     const a = D.AUDITORIA.find(x => x.id === id);
-    return { titulo: a.registro, sub: 'Cambio · ' + esc(a.cuando), mod: 'auditoria', bloques: [{ filas: [{ l: 'Módulo', v: esc(a.modulo) }, { l: 'Qué', v: esc(a.campo) }, { l: 'Antes', v: esc(a.antes) }, { l: 'Después', v: esc(a.despues) }, { l: 'Quién', v: esc(a.quien) + (a.tipoActor !== 'persona' ? ' ' + tag(a.tipoActor === 'bot' ? 'Bot' : 'Agente', 'lila') : '') }, { l: 'Motivo', v: esc(a.motivo || '—'), largo: true }] }, { html: '<p class="muted">Este registro no se puede editar ni borrar. Lo escribe la propia base de datos.</p>' }] };
+    return { titulo: a.registro, sub: 'Cambio · ' + esc(a.cuando), mod: 'auditoria', bloques: [{ filas: [{ l: 'Módulo', v: esc(a.modulo) }, { l: 'Qué', v: esc(a.campo) }, { l: 'Antes', v: esc(a.antes), largo: true }, { l: 'Después', v: esc(a.despues), largo: true }, { l: 'Quién', v: esc(a.quien) + (a.tipoActor !== 'persona' ? ' ' + tag(a.tipoActor === 'bot' ? 'Bot' : 'Agente', 'lila') : '') }, { l: 'Motivo', v: esc(a.motivo || '—'), largo: true }] }, { html: '<p class="muted">Este registro no se puede editar ni borrar. Lo escribe la propia base de datos.</p>' }] };
   };
 })();

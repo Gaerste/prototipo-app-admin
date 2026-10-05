@@ -13,16 +13,18 @@
   const ticket = p => Math.round(p.venta / p.pedidos * 100) / 100;
   A.ticket = ticket;
   function parte() {
-    const tA = ticket(TK.ayer), tP = ticket(TK.domPasado), cambio = (tA / tP - 1) * 100;
+    const tA = ticket(TK.ayer), tP = ticket(TK.domPasado), cambio = (tA / tP - 1) * 100, cambioP = (TK.ayer.pedidos / TK.domPasado.pedidos - 1) * 100;
+    const pct = c => `<small class="${c >= 0 ? 'up' : 'down'}">${c >= 0 ? '+' : '−'}${fmt(Math.abs(c), 0)} %</small>`;
     return `<article class="parte" aria-label="El parte de la mañana">
       <div class="hoja-cab"><p class="etq">El parte de hoy · llegó a las 7:00 por WhatsApp</p><button class="enlace" data-abrir="kpi:parte">Cómo se calcula</button></div>
-      <p class="parte-texto">Ayer domingo se vendieron <b>$ 3.006</b>, el 117 % de lo que hacía falta. Hoy la meta es <b>$ 2.573</b> para cubrir los costos del día.</p>
+      <p class="parte-texto">Ayer domingo se vendieron <b>$ 3.006</b>, el 117&nbsp;% de lo que hacía falta. Hoy la meta es <b>$ 2.573</b> para cubrir los costos del día.</p>
       <div class="medidor" role="img" aria-label="Ayer se vendió 117 % de la meta"><span style="width:100%"></span><i style="left:85.6%"></i></div>
       <p class="leyenda"><span>Ayer, $ 3.006</span><span>La raya marca la meta</span></p>
       <div class="mini-cifras">
         <button data-abrir="kpi:semana"><small>Domingo pasado</small><b>$ 2.863</b><small class="up">+5 %</small></button>
         <button data-abrir="kpi:anio"><small>Mismo domingo de 2025</small><b>$ 2.708</b><small class="up">+11 %</small></button>
-        <button data-abrir="kpi:ticket"><small>Pedidos · ticket</small><b>${TK.ayer.pedidos} · ${dinero(tA)}</b><small class="${cambio >= 0 ? 'up' : 'down'}">${cambio >= 0 ? '+' : '−'}${fmt(Math.abs(cambio), 0)} % ticket</small></button>
+        <button data-abrir="kpi:ticket"><small>Pedidos ayer</small><b>${TK.ayer.pedidos}</b>${pct(cambioP)}</button>
+        <button data-abrir="kpi:ticket"><small>Ticket promedio</small><b>${dinero(tA)}</b>${pct(cambio)}</button>
       </div>
     </article>`;
   }
@@ -56,7 +58,8 @@
     const bancos = D.CUENTAS.filter(c => c.mon === 'bs');
     const totBs = bancos.reduce((s, c) => s + c.saldo, 0);
     return `<article class="hoja">
-      <div class="hoja-cab"><h2>${ic('bancos')}Cuánta plata hay hoy</h2>${tag('Llega en la fase 10', 'lila')}</div>
+      <div class="hoja-cab"><h2>${ic('bancos')}Cuánta plata hay hoy</h2></div>
+      <p class="muted">Saldos de ejemplo: los reales llegan cuando se conecten los bancos.</p>
       <dl class="kv">${bancos.map(c => `<div><dt><span class="acct" data-c="${c.id}">${c.id}</span> ${esc(c.nombre)}</dt><dd>${dinero(c.saldo, 'bs', 0)}</dd></div>`).join('')}
       <div class="total"><dt><b>Total en bancos</b></dt><dd>${dinero(totBs, 'bs', 0)} <span class="muted">≈ ${dinero(totBs / D.TASA.usd, 'usd', 0)}</span></dd></div></dl>
       <p class="muted">Zelle, Binance y la bóveda se ven en Bancos y en Bóveda. El parte de WhatsApp nunca dice lo que hay en la bóveda.</p>
@@ -103,7 +106,7 @@
         <div class="rejilla">
           <div class="pila c7"><div class="sec"><h2>Lo que vence con el SENIAT y la Alcaldía</h2><button class="enlace" data-ir="fiscal">Ver el calendario</button></div>
             <ul class="lista">${prox.map(o => `<li><button class="fila" data-abrir="obligacion:${o.id}"><span class="lead ${o.faltan <= 1 ? 'aviso' : ''}">${ic('fiscal')}</span><span class="medio"><b>${esc(o.corto)}</b><small>${esc(o.ente)} · vence ${esc(o.vence)}</small></span><span class="fin">${A.estadoTag(o.estado)}</span></button></li>`).join('')}</ul></div>
-          <div class="pila c5">${pend}<article class="hoja"><div class="hoja-cab"><h2>${ic('archivo')}Paquete de septiembre</h2>${tag('4 de 6 listos', 'aviso')}</div><button class="enlace" data-ir="fiscal/paquete">Ver lo que falta ${ic('derecha', 's')}</button></article></div>
+          <div class="pila c5">${pend}<article class="hoja"><div class="hoja-cab"><h2>${ic('archivo')}Tu paquete de septiembre</h2>${tag('4 de 6 listos', 'aviso')}</div><button class="enlace" data-ir="fiscal/paquete">Ver lo que falta ${ic('derecha', 's')}</button></article></div>
         </div></div>`;
     }
     if (r === 'rrhh') {
@@ -126,7 +129,8 @@
       const esHoy = x => x.d[0] === 5 && x.d[1] === 9, esMan = x => x.d[0] === 6 && x.d[1] === 9;
       const hoyR = D.RESERVAS.filter(x => esHoy(x) && x.estado !== 'cancelada').sort((a, b) => a.hora.localeCompare(b.hora)), manR = D.RESERVAS.filter(x => esMan(x) && x.estado !== 'cancelada');
       const evs = D.EVENTOS_AG.filter(e => e.d[1] === 9 && e.d[0] >= 5 && e.personas);
-      return `<div class="pagina">${saludo}
+      // lo que no salió al grupo va arriba: es lo único que pide algo (mandarlo a mano)
+      return `<div class="pagina">${saludo}${(A.noSalieron ? A.noSalieron() : []).map(x => `<p class="nota alerta">${ic('alerta', 's')}<span><b>No salió un aviso al grupo:</b> ${esc((x.aviso.tipo || 'aviso').toLowerCase())} de ${esc(x.nombre)} (${esc(x.aviso.hora)}). <button class="enlace" data-ir="calendario/avisos">Mandarlo a mano ${ic('derecha', 's')}</button></span></p>`).join('')}
         <div class="cifras">
           ${A.cifra({ etq: 'Reservas de hoy', valor: hoyR.length, sub: hoyR.reduce((a, x) => a + x.personas, 0) + ' personas', ir: 'calendario/reservas' })}
           ${A.cifra({ etq: 'Mañana', valor: manR.length, sub: manR.reduce((a, x) => a + x.personas, 0) + ' personas · falta un abono', tono: 'aviso', abrir: manR[0] ? 'reserva:' + manR[0].id : '' })}
@@ -135,14 +139,14 @@
         </div>
         <div class="rejilla"><div class="pila c7"><div class="sec"><h2>Reservas de hoy</h2><button class="btn pri chico" data-ir="calendario/nueva">${ic('mas', 's')}Nueva reserva</button></div>
           <ul class="lista">${hoyR.map(x => `<li><button class="fila" data-abrir="reserva:${x.id}"><span class="lead info">${ic('cubiertos')}</span><span class="medio"><b>${esc(x.hora)} · ${esc(x.nombre)}</b><small>${x.personas} personas · ${esc(x.area)} ${esc(x.mesa)}${x.notas ? ' · ' + esc(x.notas) : ''}</small></span><span class="fin">${A.estadoTag(x.estado)}</span></button></li>`).join('')}</ul>${pend}</div>
-          <div class="pila c5"><div class="sec"><h2>El aviso de las 11:00</h2>${tag('Enviado (simulado)', 'ok')}</div>${A.wa(A.msgDia([5, 9], 'Reservas de hoy'), { hora: '11:00' })}
+          <div class="pila c5"><div class="sec"><h2>El aviso de las 11:00</h2>${tag('Enviado (simulado)', 'ok')}</div>${A.wa(A.msgDia([5, 9], 'Reservas de hoy'), { hora: '11:00', estado: 'confirmado' })}
           <p class="muted">Solo ves el calendario: reservas, eventos, y las vacaciones y cumpleaños del personal para armar las mesas. Nada de plata.</p></div></div></div>`;
     }
     if (r === 'compras') {
       return `<div class="pagina">${saludo}
         <div class="rejilla">
           <div class="pila c7"><div class="sec"><h2>Radar de precios</h2><button class="enlace" data-ir="analisis/precios">Ver todos</button></div>
-            ${A.tabla({ cols: [{ t: 'Insumo', cls: 'p' }, { t: 'Antes', cls: 'r x' }, { t: 'Ahora', cls: 'r' }, { t: 'Cambio', cls: 'e' }], filas: D.INSUMOS.map(i => { const c = (i.ahora / i.antes - 1) * 100; return { abrir: 'insumo:' + i.id, celdas: [`<b>${esc(i.nombre)}</b><small>${esc(i.prov)}</small>`, dinero(i.antes), dinero(i.ahora) + ' / ' + i.unidad, tag((c > 0 ? '+' : '') + fmt(c, 1) + ' %', c > 5 ? 'alerta' : c > 0 ? 'aviso' : 'ok')] }; }) })}</div>
+            ${A.tabla({ cols: [{ t: 'Insumo', cls: 'p' }, { t: 'Antes', cls: 'r x plata' }, { t: 'Ahora', cls: 'r plata' }, { t: 'Cambio', cls: 'e' }], filas: D.INSUMOS.map(i => { const c = (i.ahora / i.antes - 1) * 100; return { abrir: 'insumo:' + i.id, celdas: [`<b>${esc(i.nombre)}</b><small>${esc(i.prov)}</small>`, dinero(i.antes), dinero(i.ahora) + ' / ' + i.unidad, tag((c > 0 ? '+' : '') + fmt(c, 1) + ' %', c > 5 ? 'alerta' : c > 0 ? 'aviso' : 'ok')] }; }) })}</div>
           <div class="pila c5">${pend}${A.tarjetaRendir ? A.tarjetaRendir(u.id) : ''}${eventosCompras()}</div>
         </div></div>`;
     }
@@ -166,11 +170,12 @@
       <p class="muted">Es lo único que puedes registrar: tu propio retiro, con foto y código. Todo lo demás lo ves sin poder cambiarlo.</p></article>`;
   }
 
-  PANT.inicio = { titulo: 'Inicio', grupo: 'Hoy', icono: 'inicio', mod: 'inicio', render: inicio };
+  // palabras: las de la casa con que alguien buscaría esta pantalla (el buscador compara sin tildes)
+  PANT.inicio = { titulo: 'Inicio', grupo: 'Hoy', icono: 'inicio', mod: 'inicio', render: inicio, palabras: 'parte resumen meta ayer' };
 
   /* ---------- pendientes ---------- */
   PANT.pendientes = {
-    titulo: 'Mis pendientes', corto: 'Pendientes', grupo: 'Hoy', icono: 'lista', mod: 'inicio',
+    titulo: 'Mis pendientes', corto: 'Pendientes', grupo: 'Hoy', icono: 'lista', mod: 'inicio', palabras: 'tareas bandeja avisos',
     cuenta: () => A.misPendientes().length,
     render: () => {
       const mis = A.misPendientes(); const hechos = D.PENDIENTES.filter(p => p.para.includes(S.usuario.id) && p.hecho);
@@ -180,12 +185,22 @@
       </div>`;
     },
   };
+  // de qué módulo es un pendiente (el de la sección a la que lleva o el de la ficha que abre) y quién más puede resolverlo:
+  // solo quien edita ese módulo, con su acceso ya activo
+  const modPend = p => {
+    if (p.ir && PANT[p.ir.split('/')[0]]) return PANT[p.ir.split('/')[0]].mod;
+    if (p.abrir) { const [t, i] = p.abrir.split(':'); try { const f = FICHAS[t] && FICHAS[t](i); if (f && f.mod) return f.mod; } catch (_) { /* sin ficha: queda en Inicio */ } }
+    return 'inicio';
+  };
+  const otrosPara = p => { const mod = modPend(p); return D.USUARIOS.filter(u => u.id !== S.usuario.id && !['invitada', 'por_confirmar', 'sin_acceso'].includes(u.estado) && A.puede(mod, 'editar', u)); };
   FICHAS.pendiente = id => {
     const p = D.PENDIENTES.find(x => x.id === id);
     const acciones = [];
-    if (p.ir) acciones.push({ txt: 'Ir a resolverlo', acc: 'pend-ir', icono: 'derecha', tono: 'pri' });
+    // si el pendiente trae su ficha, «Abrir» la abre directo (y, si trae también su sección, la deja detrás, donde se resuelve)
     if (p.abrir) acciones.push({ txt: 'Abrir', acc: 'pend-abrir', icono: 'derecha', tono: 'pri' });
-    acciones.unshift({ txt: 'Marcar resuelto', acc: 'pend-resolver', icono: 'check' }, { txt: 'Pasar a otra persona', acc: 'pend-pasar', icono: 'usuario' });
+    else if (p.ir) acciones.push({ txt: 'Ir a resolverlo', acc: 'pend-ir', icono: 'derecha', tono: 'pri' });
+    // «Pasar a otra persona» solo aparece si alguien más puede hacerlo
+    acciones.unshift({ txt: 'Marcar resuelto', acc: 'pend-resolver', icono: 'check' }, ...(otrosPara(p).length ? [{ txt: 'Pasar a otra persona', acc: 'pend-pasar', icono: 'usuario' }] : []));
     return {
       titulo: p.titulo, sub: 'Pendiente · ' + esc(p.edad), mod: 'inicio', obj: p,
       tags: [[p.tipo === 'escalado' ? 'Subió al dueño' : p.tipo === 'alerta' ? 'Urgente' : 'Normal', p.tipo === 'alerta' ? 'alerta' : p.tipo === 'escalado' ? 'lila' : '']],
@@ -197,7 +212,14 @@
     };
   };
   ACC['pend-ir'] = id => { const p = D.PENDIENTES.find(x => x.id === id); A.ir(p.ir + (p.sub2 ? '/' + p.sub2 : '')); };
-  ACC['pend-abrir'] = id => { const p = D.PENDIENTES.find(x => x.id === id); const [t, i] = p.abrir.split(':'); A.abrir(t, i); };
+  ACC['pend-abrir'] = id => {
+    const p = D.PENDIENTES.find(x => x.id === id); const [t, i] = p.abrir.split(':');
+    if (p.ir) {
+      A.ir(p.ir + (p.sub2 ? '/' + p.sub2 : '')); if (A.S.ruta !== p.ir.split('/')[0]) return; // sin acceso a la sección (o con un formulario a medias), no se abre nada
+      const m = document.getElementById('main'); if (m) m.focus({ preventScroll: true }); // al cerrar la ficha, el teclado queda en la sección
+    }
+    A.abrir(t, i);
+  };
   ACC['pend-resolver'] = id => {
     const p = D.PENDIENTES.find(x => x.id === id);
     A.pedirMotivo({ titulo: 'Marcar resuelto', etiqueta: 'Cómo se resolvió', obligatorio: false, boton: 'Marcar resuelto' }).then(m => {
@@ -208,19 +230,21 @@
   };
   ACC['pend-pasar'] = id => {
     const p = D.PENDIENTES.find(x => x.id === id);
-    const opciones = D.USUARIOS.filter(u => u.id !== S.usuario.id && u.estado !== 'invitada').map(u => `<option value="${u.id}">${esc(A.nombreDe(u))}</option>`).join('');
+    const gente = otrosPara(p); const modulo = A.nombreModulo(modPend(p));
+    const opciones = gente.map(u => `<option value="${u.id}">${esc(A.nombreDe(u))}</option>`).join('');
     const env = document.querySelector('#modal-raiz');
-    env.innerHTML = `<div class="modal-env"><div class="modal" role="dialog" aria-modal="true"><h2>Pasar a otra persona</h2>
-      <label class="campo" for="pasar-a"><span>¿A quién?</span><select id="pasar-a">${opciones}</select></label>
-      <div class="modal-acc"><button class="btn sec" data-pasar="no">Cancelar</button><button class="btn pri" data-pasar="si">Pasar</button></div></div></div>`;
-    env.querySelector('#pasar-a').focus();
+    A.modal(`<h2 id="modal-t">Pasar a otra persona</h2>
+      ${gente.length ? `<label class="campo" for="pasar-a"><span>¿A quién?</span><select id="pasar-a">${opciones}</select><small class="ayuda">Solo aparece quien puede hacer cambios en «${esc(modulo)}».</small></label>`
+        : `<p class="muted">Nadie más puede resolverlo: solo tú haces cambios en «${esc(modulo)}».</p>`}
+      <div class="modal-acc"><button class="btn sec" data-pasar="no">${gente.length ? 'Cancelar' : 'Cerrar'}</button>${gente.length ? '<button class="btn pri" data-pasar="si">Pasar</button>' : ''}</div>`, gente.length ? 'teclado' : '');
+    (env.querySelector('#pasar-a') || env.querySelector('[data-pasar="no"]')).focus();
     env.onclick = e => {
       const b = e.target.closest('[data-pasar]'); if (!b) return;
       if (b.dataset.pasar === 'si') {
         const a = env.querySelector('#pasar-a').value; p.para = [a];
         A.auditar({ modulo: 'Pendientes', registro: p.titulo, campo: 'responsable', antes: S.usuario.nombre, despues: D.USUARIOS.find(u => u.id === a).nombre });
-        env.innerHTML = ''; A.cerrarFicha(); A.pintarPagina(); A.aviso('Lo pasaste a ' + D.USUARIOS.find(u => u.id === a).nombre + '.');
-      } else env.innerHTML = '';
+        A.cerrarModal(); A.cerrarFicha(); A.pintarPagina(); A.aviso('Lo pasaste a ' + D.USUARIOS.find(u => u.id === a).nombre + '.');
+      } else A.cerrarModal();
     };
   };
 
@@ -263,8 +287,8 @@
   };
   const nivelTag = (n, mod) => ({ a: tag('Aprueba', 'ok'), e: tag('Edita', 'info'), v: tag('Ve', ''), g: tag('Ve agrupado', 'aviso'), p: tag('Prepara', 'info'), r: tag('Revisa', 'info') }[n] || '');
   A.nivelTag = nivelTag;
-  ACC['cambiar-clave'] = () => A.pedirCodigo('Para cambiar tu clave confirma con tu código.').then(() => A.aviso('Te mandamos el paso para la clave nueva. (Simulado)')).catch(() => {});
-  ACC['nuevos-respaldos'] = () => A.pedirCodigo('Los códigos viejos dejan de servir.').then(() => A.aviso('8 códigos nuevos listos. (Simulado)')).catch(() => {});
+  ACC['cambiar-clave'] = () => A.pedirCodigo({ que: 'Cambiar tu clave', det: 'Te mandamos el paso para la clave nueva.', boton: 'Cambiar la clave' }).then(() => A.aviso('Te mandamos el paso para la clave nueva. (Simulado)')).catch(() => {});
+  ACC['nuevos-respaldos'] = () => A.pedirCodigo({ que: 'Códigos de respaldo nuevos', det: 'Los 8 viejos dejan de servir.', boton: 'Crear los nuevos' }).then(() => A.aviso('Creados: 8 códigos nuevos. Los viejos ya no sirven. (Simulado)')).catch(() => {});
   ACC['cerrar-sesion'] = id => { D.SESIONES.splice(D.SESIONES.findIndex(s => s.id === id), 1); A.pintarPagina(); A.aviso('Sesión cerrada en ese equipo.'); };
 
   /* ---------- revisión del prototipo ---------- */
@@ -329,6 +353,16 @@
       ['✓', 'Consumos', 'Los de los socios, en Caja chica y socios, con el tope de $ 500 al mes. Los del personal, en Préstamos y descuentos: corte el 27, se descuentan en la 2.ª quincena. Ambos llegan del POS.'],
       ['✓', 'Calendario', 'El mes con capas (reservas, eventos, personal, fiscal y pagos), las reservas que avisan al grupo de mesoneros, los eventos y el calendario del personal: vacaciones, contratos que vencen y cumpleaños.'],
       ['✓', 'Usuaria nueva propuesta: Patricia (reservas)', 'Cambia «Ver como» a Patricia para ver lo que vería la supervisora: solo el calendario.'],
+    ]],
+    ['Mejorado el 5 de octubre: más fácil de usar', [
+      ['✓', 'Guardar solo lo que se tocó', 'Al editar una ficha solo se guardan los campos que se cambiaron. Si un número queda 10 veces más grande o más chico, la app pregunta si fue la coma. El registro de cambios dice «Descanso → Tarde», no códigos.'],
+      ['✓', 'No se pierde lo escrito', 'Si hay algo a medias, salir pregunta «¿Salir sin guardar?». Las respuestas de Cecilia se guardan solas al salir del cuadro.'],
+      ['✓', 'Firmar sabiendo qué se firma', 'La ventana del código dice qué, a quién y cuánto, y el botón dice la acción («Aprobar $ 200»). La casilla acepta pegar y el relleno automático del teléfono. Pedir un préstamo ya no pide código; aprobarlo sí.'],
+      ['✓', 'Lo aprobado queda con candado', 'Al aprobar el lote del lunes, sus cuentas y montos quedan con candado y el sello dice el total y la hora. «Cambiar el lote» lo reabre con motivo.'],
+      ['✓', 'Sin prueba no hay sello', 'Una falta justificada, la firma de un préstamo o una diferencia del banco piden el archivo ahí mismo. Sin archivo quedan «sin soporte», nunca con sello.'],
+      ['✓', 'Reservas más claras', 'Nueva reserva pregunta Hoy, Mañana u Otro día; ninguna hora se esconde en el libro; «Anular reserva» va aparte; Llegó y No vino se pueden deshacer. Los avisos al grupo muestran si salieron, como en WhatsApp.'],
+      ['✓', 'Mejor en el teléfono', 'Lupa para buscar en toda la app, sin importar las tildes; botones de al menos 44 px; montos que no se parten; la pestaña elegida siempre a la vista; textos sin «fases»; letra y bordes más claros; la raya roja solo en columnas de plata.'],
+      ['✓', 'Teclado', 'Enter abre la ficha, Escape cierra y el teclado vuelve a la fila donde estaba.'],
     ]],
     ['Corregido el 4 de octubre', [
       ['✓', 'Lo cerrado ya no se edita', 'Una factura pagada, una obligación declarada, una propina pagada o un gasto registrado se corrigen con un movimiento al revés, con motivo y código. Al enviar el lote del lunes, sus facturas quedan pagadas.'],

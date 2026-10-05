@@ -4,7 +4,9 @@
 
   /* =============== DOCUMENTOS =============== */
   PANT.documentos = {
-    titulo: 'Documentos', grupo: 'Para decidir', icono: 'documentos', mod: 'documentos', tab: 'Docs',
+    titulo: 'Documentos', grupo: 'Para decidir', icono: 'documentos', mod: 'documentos', tab: 'Docs', camino: 'Documentos', palabras: 'archivo archivos drive pdf carpeta',
+    // cada carpeta que ve quien busca («Documentos › Estados de cuenta»)
+    secciones: () => D.CARPETAS.filter(c => c.ven.includes(S.usuario.id)).map(c => [c.id, c.nombre.split(' (')[0], 'carpeta']),
     render: (sub = 'todas') => {
       const mias = D.CARPETAS.filter(c => c.ven.includes(S.usuario.id));
       const archivos = D.ARCHIVOS.filter(a => mias.some(c => c.id === a.carpeta) && (sub === 'todas' || a.carpeta === sub));
@@ -53,7 +55,8 @@
   };
   const PERIODO_PLATOS = 'últimas 4 semanas (' + D.SEMANAS[D.SEMANAS.length - 4][0] + ' – 4 oct)';
   PANT.analisis = {
-    titulo: 'Análisis', grupo: 'Para decidir', icono: 'analisis', mod: 'analisis', tab: 'Análisis',
+    titulo: 'Análisis', grupo: 'Para decidir', icono: 'analisis', mod: 'analisis', tab: 'Análisis', palabras: 'ventas numeros reporte',
+    secciones: [['ventas', 'Ventas', 'ticket pedidos equilibrio'], ['termometro', 'Termómetro de la comida', 'costo comida recetas merma'], ['precios', 'Radar de precios', 'precio insumos'], ['decisiones', 'Medir decisiones', 'decision antes despues']],
     render: (sub = 'ventas') => {
       let cuerpo = '';
       if (sub === 'ventas') {
@@ -77,7 +80,7 @@
           <div class="barras">${TERMO.fugas.map(([n, v], i) => `<button class="barra" data-abrir="fuga:${i}"><span>${n}</span><b>${dinero(v, 'usd', 0)}</b><div class="pista"><span class="alerta" style="width:${v / 6.4}%"></span></div></button>`).join('')}</div>
           <p class="muted">Comida y barra se miden por separado. Las recetas salen del recetario propio, no de las de Odoo (que están mal desde junio).</p></article>`;
       if (sub === 'precios') cuerpo = `<p class="desc">Avisa cuando un insumo sube más de 5 % contra la compra anterior o cuando otro proveedor lo vendió más barato en las últimas 4 semanas.</p>` +
-        A.tabla({ cols: [{ t: 'Insumo', cls: 'p' }, { t: 'Antes', cls: 'r x' }, { t: 'Ahora', cls: 'r' }, { t: 'Más barato en', cls: 'x' }, { t: 'Cambio', cls: 'e' }], filas: D.INSUMOS.map(i => { const c = (i.ahora / i.antes - 1) * 100; return { abrir: 'insumo:' + i.id, celdas: [`<b>${esc(i.nombre)}</b><small>${esc(i.prov)} · por ${esc(i.unidad)}</small>`, dinero(i.antes), dinero(i.ahora), esc(i.mejor || '—'), tag((c > 0 ? '+' : '') + fmt(c, 1) + ' %', c > 5 ? 'alerta' : c > 0 ? 'aviso' : 'ok')] }; }) });
+        A.tabla({ cols: [{ t: 'Insumo', cls: 'p' }, { t: 'Antes', cls: 'r x plata' }, { t: 'Ahora', cls: 'r plata' }, { t: 'Más barato en', cls: 'x' }, { t: 'Cambio', cls: 'e' }], filas: D.INSUMOS.map(i => { const c = (i.ahora / i.antes - 1) * 100; return { abrir: 'insumo:' + i.id, celdas: [`<b>${esc(i.nombre)}</b><small>${esc(i.prov)} · por ${esc(i.unidad)}</small>`, dinero(i.antes), dinero(i.ahora), esc(i.mejor || '—'), tag((c > 0 ? '+' : '') + fmt(c, 1) + ' %', c > 5 ? 'alerta' : c > 0 ? 'aviso' : 'ok')] }; }) });
       if (sub === 'decisiones') cuerpo = `<p class="desc">Antes de un cambio grande (precios, menú, horario) se marca la fecha. La app compara 4 semanas antes contra 4 semanas después, descontando la temporada.</p>` +
         `<ul class="lista">${D.DECISIONES.map(d => `<li><button class="fila" data-abrir="decision:${d.id}"><span class="lead ${d.tono}">${ic('analisis')}</span><span class="medio"><b>${esc(d.nombre)}</b><small>${esc(d.resultado)}</small></span><span class="fin">${A.estadoTag(d.estado)}${ic('derecha', 's chev')}</span></button></li>`).join('')}</ul>${A.boton('analisis', 'Medir una decisión nueva', 'data-acc="pronto"', { tono: 'sec', icono: 'mas' })}`;
       return `<div class="pagina">${A.cab('Para decidir con números', 'Análisis', 'Ventas, costos de la comida, precios de los insumos y el efecto de cada decisión. Sale de los resúmenes diarios del POS de Odoo.')}

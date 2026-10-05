@@ -84,7 +84,7 @@ window.DB = (() => {
     { id: 'c1', hora: '13:42', banco: 'Banesco', tipo: 'Pago móvil', monto: 33812.47, mon: 'bs', estado: 'por_confirmar', motivo: 'La foto dice «en proceso»', ref: '000012871903', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
     { id: 'c2', hora: '13:38', banco: 'Mercantil', tipo: 'Pago móvil', monto: 5214.30, mon: 'bs', estado: 'por_confirmar', motivo: 'Mercantil no manda correo', ref: '31580946', cajera: 'Caja 2', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
     { id: 'c3', hora: '13:31', banco: 'Zelle', tipo: 'Zelle', monto: 46.20, mon: 'usd', estado: 'confirmado', motivo: '', ref: 'M. Pérez', cajera: 'Caja 1', fuente: 'Correo del banco', destino: 'ZEL', cerro: 'El bot' },
-    { id: 'c4', hora: '13:20', banco: 'Binance', tipo: 'USDT', monto: 24.60, mon: 'usdt', estado: 'confirmado', motivo: '', ref: 'Orden 4402…118', cajera: 'Caja 2', fuente: 'Correo de Binance', destino: 'BIN', cerro: 'El bot' },
+    { id: 'c4', hora: '13:20', banco: 'Binance', tipo: 'USDT', monto: 24.60, mon: 'usdt', estado: 'confirmado', motivo: '', ref: '440219830571206118', cajera: 'Caja 2', fuente: 'Correo de Binance', destino: 'BIN', cerro: 'El bot' },
     { id: 'c5', hora: '13:05', banco: 'Venezolano', tipo: 'Pago móvil', monto: 19877.35, mon: 'bs', estado: 'confirmado', motivo: '', ref: '007431562', cajera: 'Caja 1', fuente: 'Reacción ✅ de Jose', destino: 'BVCA', cerro: 'Jose', doble: true },
     { id: 'c6', hora: '12:54', banco: 'Provincial', tipo: 'Transferencia', monto: 17290.84, mon: 'bs', estado: 'avisado', motivo: 'Pasaron 20 min sin correo: el bot avisó al grupo', ref: '000015208', cajera: 'Caja 2', fuente: 'Captura', destino: 'BVCJ', cerro: '—' },
     { id: 'c7', hora: '12:51', banco: 'Mercantil', tipo: 'Pago móvil', monto: 38604.15, mon: 'bs', estado: 'por_confirmar', motivo: 'Mercantil no manda correo', ref: '58817230', cajera: 'Caja 1', fuente: 'Captura', destino: 'BVCA', cerro: '—' },
@@ -101,21 +101,21 @@ window.DB = (() => {
     { id: 'pe1', para: ['alejandro', 'jose'], tipo: 'alerta', titulo: '4 pagos por confirmar en Caja', sub: 'El más viejo es de las 12:40', de: 'El bot', edad: '1 h', ir: 'caja' },
     { id: 'pe2', para: ['alejandro'], tipo: 'alerta', titulo: 'Un proveedor cambió de cuenta', sub: 'Hortalizas El Valle · pide tu código', de: 'Jose', edad: '3 días', ir: 'pagos', prov: 'p4' },
     { id: 'pe18', para: ['alejandro'], tipo: 'alerta', titulo: 'Una persona del personal cambió de cuenta', sub: 'Yohana Blanco · confírmala con ella antes de pagarle el 15', de: 'Andreina', edad: '4 días', ir: 'pagos', sub2: 'nomina', emp: 'e5' },
-    { id: 'pe3', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar una devolución a un cliente', sub: '$ 25,00 por un pago doble · la preparó Jose', de: 'Jose', edad: '1 día', abrir: 'devcliente:dc1' },
+    { id: 'pe3', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar una devolución a un cliente', sub: 'María Gutiérrez · $ 25,00 por un pago doble · la preparó Jose', de: 'Jose', edad: '1 día', abrir: 'devcliente:dc1' },
     { id: 'pe4', para: ['alejandro', 'manuel'], tipo: 'escalado', titulo: 'No llegó la reposición del queso', sub: 'Subió a ti hace 2 días · era de Manuel', de: 'Manuel', edad: '4 días', abrir: 'devolucion:dv1' },
     { id: 'pe5', para: ['cecilia', 'jose', 'alejandro'], tipo: 'aviso', titulo: 'IVA de la 2.ª quincena de septiembre', sub: 'Vence mañana · Jose tiene que revisarlo', de: 'Cecilia', edad: 'Hoy', abrir: 'obligacion:o1' },
     { id: 'pe6', para: ['cecilia', 'jose'], tipo: 'aviso', titulo: 'Faltan 2 reportes Z de septiembre', sub: 'Días 13 y 27 · sin el Z no cierra el libro de ventas', de: 'La app', edad: '2 días', ir: 'fiscal', sub2: 'z' },
     { id: 'pe7', para: ['alejandro', 'jose', 'cecilia'], tipo: 'alerta', titulo: 'Inspección de la máquina fiscal vencida', sub: 'Venció el 28 de septiembre', de: 'La app', edad: '7 días', abrir: 'maquina:m1' },
     { id: 'pe8', para: ['andreina', 'jose', 'alejandro'], tipo: 'aviso', titulo: 'Preparar la nómina del 15 de octubre', sub: 'Falta el reporte del reloj', de: 'La app', edad: 'Hoy', ir: 'nomina' },
-    { id: 'pe9', para: ['jose', 'alejandro'], tipo: 'aviso', titulo: 'Subir el estado de cuenta de septiembre del BNC', sub: 'Los otros 3 bancos ya están conciliados', de: 'La app', edad: '3 días', ir: 'bancos' },
-    { id: 'pe10', para: ['manuel', 'alejandro'], tipo: 'info', titulo: 'El queso telita subió 9 %', sub: 'Quesera Los Andes · otro proveedor lo vendió 6 % más barato', de: 'Radar de precios', edad: 'Hoy', ir: 'analisis' },
+    { id: 'pe9', para: ['jose', 'alejandro'], tipo: 'aviso', titulo: 'Subir el estado de cuenta de septiembre del BNC', sub: 'Los otros 3 bancos ya están conciliados', de: 'La app', edad: '3 días', ir: 'bancos', sub2: 'conciliacion', abrir: 'conciliacion:BNC' },
+    { id: 'pe10', para: ['manuel', 'alejandro'], tipo: 'info', titulo: 'El queso telita subió 9 %', sub: 'Quesera Los Andes · otro proveedor lo vendió 6 % más barato', de: 'Radar de precios', edad: 'Hoy', ir: 'analisis', sub2: 'precios', abrir: 'insumo:i1' },
     { id: 'pe12', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar un préstamo de $ 200', sub: 'Rosa Medina · 4 cuotas de $ 50 · está en período de prueba', de: 'Jose', edad: 'Hoy', abrir: 'prestamo:pr4' },
     { id: 'pe13', para: ['alejandro', 'jose'], tipo: 'alerta', titulo: 'La liquidación de Gabriela Núñez vence hoy', sub: 'Renunció el 30 sep · hay 5 días para pagarla · $ 237,60', de: 'La app', edad: 'Hoy', abrir: 'liquidacion:lq1' },
     { id: 'pe14', para: ['andreina', 'alejandro'], tipo: 'aviso', titulo: 'Clasificar la falta de Kevin Torres', sub: 'Sáb 3 oct · avisó que estaba enfermo, falta el justificativo', de: 'La app', edad: '2 días', abrir: 'falta:fa1' },
     { id: 'pe15', para: ['jose'], tipo: 'aviso', titulo: 'Revisar 3 redobles de esta quincena', sub: 'Kevin, José Gregorio y Jhonny · entran en la nómina del 15', de: 'La app', edad: 'Hoy', ir: 'asistencia', sub2: 'redobles' },
     { id: 'pe17', para: ['jose'], tipo: 'info', titulo: 'Facturas leídas por el agente', sub: '3 fotos de facturas · apruébalas, corrígelas o recházalas', de: 'agente-facturas', edad: 'Ayer', abrir: 'facagente:lote' },
     { id: 'pe16', para: ['patricia', 'alejandro'], tipo: 'aviso', titulo: 'Falta el abono de Inversiones Delta', sub: 'Almuerzo de 12 personas mañana a la 13:00 · abono de $ 60', de: 'La app', edad: 'Hoy', abrir: 'reserva:rs3' },
-    { id: 'pe11', para: ['luis', 'alejandro'], tipo: 'info', titulo: 'Tu retiro del sábado quedó registrado', sub: '$ 500 · propuesta (Q5): se descuenta del reparto de utilidades', de: 'La app', edad: '2 días', ir: 'cajachica', sub2: 'socios' },
+    { id: 'pe11', para: ['luis', 'alejandro'], tipo: 'info', titulo: 'Tu retiro del sábado quedó registrado', sub: '$ 500 · propuesta (Q5): se descuenta del reparto de utilidades', de: 'La app', edad: '2 días', ir: 'cajachica', sub2: 'socios', abrir: 'retiro:r1' },
   ];
 
   /* ---------- proveedores, facturas, devoluciones ---------- */
@@ -211,7 +211,7 @@ window.DB = (() => {
     { id: 'k6', nombre: 'Rosa Pacheco', tipo: 'Cliente habitual', esp: false, rif: 'V-20000206-6', credito: 50, dias: 15, saldo: 31.00, mon: 'eur', antig: 92, ultimo: '4 jul', contacto: '0412-000-0206', consiente: true },
   ];
   const DEVCLIENTES = [
-    { id: 'dc1', cliente: 'Pago doble de un cliente de mesa', monto: 25.00, motivo: 'Pagó por pago móvil y también en efectivo', preparo: 'Jose', estado: 'por_aprobar' },
+    { id: 'dc1', cliente: 'María Gutiérrez', mesa: 'Mesa 7', monto: 25.00, motivo: 'Pagó dos veces: por pago móvil y también en efectivo', preparo: 'Jose', estado: 'por_aprobar' },
   ];
 
   /* ---------- bóveda, caja chica, socios ---------- */
@@ -259,15 +259,16 @@ window.DB = (() => {
   POR_RENDIR.forEach(x => { x.estado = x.monto - x.facturas.reduce((s, f) => s + f.monto, 0) - x.vuelto > 0.005 ? 'abierta' : 'rendida'; });
 
   /* ---------- bancos y conciliación ---------- */
+  // lo que falta aclarar de cada cuenta no se guarda aquí: se cuenta de DIFERENCIAS (las que no están aclaradas)
   const CONCILIACION = [
-    { id: 'BVCA', mes: 'Septiembre', estado: 'conciliada', sinComp: 0, sinBanco: 0, sinId: 0, subido: 'Jue 1 oct', por: 'Jose' },
-    { id: 'BVCE', mes: 'Septiembre', estado: 'conciliada', sinComp: 0, sinBanco: 0, sinId: 0, subido: 'Jue 1 oct', por: 'Jose' },
-    { id: 'BVCJ', mes: 'Septiembre', estado: 'diferencias', sinComp: 2, sinBanco: 1, sinId: 3, subido: 'Vie 2 oct', por: 'Jose' },
-    { id: 'BNC', mes: 'Septiembre', estado: 'falta', sinComp: 0, sinBanco: 0, sinId: 0, subido: '—', por: '—' },
+    { id: 'BVCA', mes: 'Septiembre', estado: 'conciliada', subido: 'Jue 1 oct', por: 'Jose' },
+    { id: 'BVCE', mes: 'Septiembre', estado: 'conciliada', subido: 'Jue 1 oct', por: 'Jose' },
+    { id: 'BVCJ', mes: 'Septiembre', estado: 'diferencias', subido: 'Vie 2 oct', por: 'Jose' },
+    { id: 'BNC', mes: 'Septiembre', estado: 'falta', subido: '—', por: '—' },
   ];
   const DIFERENCIAS = [
     { id: 'd1', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '12 sep', desc: 'Transferencia a «Servicios Técnicos 2020»', monto: 145.00 },
-    { id: 'd2', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '23 sep', desc: 'Comisión del banco', monto: 3.20 },
+    { id: 'd2', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '23 sep', desc: 'Comisión del banco', monto: 3.20, comision: true }, // la línea del banco dice que es una comisión: solo ella se aclara como comisión
     { id: 'd3', cuenta: 'BVCJ', tipo: 'Comprobante que no aparece en el banco', fecha: '28 sep', desc: 'Pago a Frío Total ref. 00419921', monto: 450.00 },
     { id: 'd4', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '14 sep', desc: 'Pago móvil de 0412-•••-4410', monto: 61.30 },
     { id: 'd5', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '19 sep', desc: 'Transferencia de «Inversiones R&M»', monto: 220.00 },
@@ -600,7 +601,7 @@ window.DB = (() => {
   const FRESCURA = [
     ['Pagos y facturas de Odoo', 'Dom 4 oct (copia a mano)', 'aviso'],
     ['Conciliación del mes', 'Septiembre: 3 de 4 bancos', 'aviso'],
-    ['Cierre de caja', 'Todavía en papel (fase 5)', 'gris'],
+    ['Cierre de caja', 'Todavía en papel', 'gris'],
     ['Tasas', 'Hoy 7:30', 'ok'],
   ];
   const AUDITORIA = [

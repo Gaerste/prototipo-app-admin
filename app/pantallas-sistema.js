@@ -26,10 +26,10 @@
     const sig = m === 'nomina' ? { '': 'g', g: 'p', p: 'r', r: '' }[act] ?? '' : NIV[(NIV.indexOf(act) + 1) % NIV.length];
     p[m] = sig; matrizCambios++; A.pintarPagina();
   };
-  ACC['guardar-matriz'] = () => A.pedirCodigo('Guardar los cambios de permisos.').then(() => { A.auditar({ modulo: 'Usuarios', registro: 'Matriz de permisos', campo: 'permisos', despues: matrizCambios + ' cambios' }); matrizCambios = 0; A.pintarPagina(); A.aviso('Permisos guardados. Ya rigen para todos los que tienen esos roles.'); }).catch(() => {});
+  ACC['guardar-matriz'] = () => A.pedirCodigo({ que: 'Permisos · ' + matrizCambios + (matrizCambios === 1 ? ' cambio' : ' cambios'), det: 'Rigen para todos los que tienen esos roles, desde su próximo clic.', boton: 'Guardar los permisos' }).then(() => { A.auditar({ modulo: 'Usuarios', registro: 'Matriz de permisos', campo: 'permisos', despues: matrizCambios + ' cambios' }); matrizCambios = 0; A.pintarPagina(); A.aviso('Permisos guardados. Ya rigen para todos los que tienen esos roles.'); }).catch(() => {});
   function aprobaciones() {
     return `<div class="rejilla"><div class="c7 pila"><div class="sec"><h2>Quién aprueba qué</h2></div>
-        ${A.tabla({ cols: [{ t: 'Qué', cls: 'p' }, { t: 'Aprueba hasta', cls: 'r' }, { t: 'Si pasa, aprueba', cls: 'e' }], filas: D.LIMITES.map(l => ({ abrir: 'limite:' + l.id, celdas: [`<b>${esc(l.que)}</b><small>${esc(l.quien)}${l.cond ? ', ' + esc(l.cond) : ''}</small>`, l.hasta === null ? 'Sin límite' : dinero(l.hasta, l.mon, 0), esc(l.arriba)] })) })}
+        ${A.tabla({ cols: [{ t: 'Qué', cls: 'p' }, { t: 'Aprueba hasta', cls: 'r plata' }, { t: 'Si pasa, aprueba', cls: 'e' }], filas: D.LIMITES.map(l => ({ abrir: 'limite:' + l.id, celdas: [`<b>${esc(l.que)}</b><small>${esc(l.quien)}${l.cond ? ', ' + esc(l.cond) : ''}</small>`, l.hasta === null ? 'Sin límite' : dinero(l.hasta, l.mon, 0), esc(l.arriba)] })) })}
         <p class="muted">Los montos son propuestas para arrancar; se ajustan con la app andando. Alejandro no tiene límite.</p></div>
       <div class="c5 pila"><article class="hoja"><h2>${ic('usuario')}Suplente</h2><dl class="kv"><div><dt>Suplente</dt><dd>Por ahora, Alejandro mismo</dd></div><div><dt>Si algo espera más de 24 horas</dt><dd>La app se lo recuerda</dd></div></dl><p class="muted">Otro se nombra con la app andando (decidido el 3-oct).</p></article>
         <article class="hoja"><h2>${ic('escudo')}Reglas que no se saltan</h2><ul class="tiempo"><li><time>1</time><span>Quien prepara, quien revisa y quien aprueba son personas distintas. Lo cumple la propia base de datos.</span></li><li><time>2</time><span>Los bots y los agentes proponen. Solo escriben directo las tasas y los pagos que lee el bot de caja. Excepción: el bot de la bóveda registra al instante si todo cuadra, a nombre de quien mandó la foto y marcado «sin doble factor»; si algo falla, queda «por revisar».</span></li><li><time>3</time><span>Aprobar, anular, mover la bóveda, cambiar una cuenta, editar roles o exportar pide el código otra vez.</span></li></ul></article></div></div>`;
@@ -44,7 +44,8 @@
       ${A.boton('usuarios', 'Crear una cuenta de servicio', 'data-acc="pronto"', { tono: 'sec', icono: 'llave', permiso: 'aprobar' })}`;
   }
   PANT.usuarios = {
-    titulo: 'Usuarios y permisos', corto: 'Usuarios y permisos', grupo: 'Sistema', icono: 'usuarios', mod: 'usuarios',
+    titulo: 'Usuarios y permisos', corto: 'Usuarios y permisos', grupo: 'Sistema', icono: 'usuarios', mod: 'usuarios', camino: 'Usuarios', palabras: 'permisos roles clave codigo acceso',
+    secciones: [['personas', 'Personas', 'usuarios invitar'], ['matriz', 'Qué ve cada quien', 'permisos matriz roles'], ['aprobaciones', 'Quién aprueba qué', 'limites aprobar suplente'], ['bots', 'Bots y agentes', 'cuentas de servicio']],
     render: (sub = 'personas') => `<div class="pagina">${A.cab('Quién entra y qué ve', 'Usuarios y permisos', '', A.boton('usuarios', 'Invitar a alguien', 'data-acc="invitar"', { icono: 'mas', permiso: 'aprobar' }))}
       ${A.subnav([['personas', 'Personas', D.USUARIOS.length, true], ['matriz', 'Qué ve cada quien'], ['aprobaciones', 'Quién aprueba qué'], ['bots', 'Bots y agentes', D.SERVICIO.length, true]], sub)}
       ${{ personas, matriz, aprobaciones, bots }[sub]()}</div>`,
@@ -70,31 +71,32 @@
     const u = D.USUARIOS.find(x => x.id === id);
     const pend = D.PENDIENTES.filter(p => p.para.includes(id) && !p.hecho).length;
     const custodia = id === 'jose';
-    A.pedirMotivo({ titulo: 'Quitar acceso a ' + u.nombre, texto: `Se cierran todas sus sesiones y se anula su código. ${pend ? `Sus ${pend} pendientes pasan a quien tenga su rol.` : ''} ${custodia ? '<b>Custodia la bóveda y la caja chica: antes hay que hacer un conteo de entrega con testigo.</b>' : ''} No se borra nada de lo que hizo.`, boton: 'Quitar acceso', tono: 'peligro', codigo: true }).then(m => {
+    A.pedirMotivo({ titulo: 'Quitar acceso a ' + u.nombre, texto: `Se cierran todas sus sesiones y se anula su código. ${pend ? `Sus ${pend} pendientes pasan a quien tenga su rol.` : ''} ${custodia ? '<b>Custodia la bóveda y la caja chica: antes hay que hacer un conteo de entrega con testigo.</b>' : ''} No se borra nada de lo que hizo.`, boton: 'Quitar acceso', tono: 'peligro', codigo: { que: 'Quitar acceso a ' + esc(A.nombreDe(u)), det: esc(D.ROLES[u.rol].nombre) + ' · se cierran todas sus sesiones', boton: 'Quitar acceso', tono: 'peligro' } }).then(m => {
       u.estado = 'sin_acceso'; u.ultimo = 'Acceso quitado hoy ' + D.HOY.hora;
       A.auditar({ modulo: 'Usuarios', registro: A.nombreDe(u), campo: 'acceso', antes: 'activo', despues: 'sin acceso', motivo: m });
       A.pintarFicha(); A.pintarPagina(); A.aviso('Acceso quitado. Sus sesiones se cerraron.');
     }).catch(() => {});
   };
-  ACC['reset-2fa'] = id => A.pedirCodigo('Resetear el código de ' + D.USUARIOS.find(x => x.id === id).nombre + '. Tendrá que activarlo de nuevo.').then(() => { const u = D.USUARIOS.find(x => x.id === id); u.dosfa = false; D.ACCESOS.unshift({ cuando: 'Hoy ' + D.HOY.hora, quien: S.usuario.nombre, que: 'Reseteó el código de ' + u.nombre, donde: 'Este equipo' }); A.pintarFicha(); A.pintarPagina(); A.aviso('Código reseteado. Quedó en el registro de accesos.'); }).catch(() => {});
+  ACC['reset-2fa'] = id => A.pedirCodigo({ que: 'Resetear el código de ' + esc(A.nombreDe(D.USUARIOS.find(x => x.id === id))), det: 'Tendrá que activarlo de nuevo. Queda en el registro de accesos.', boton: 'Resetear el código', tono: 'peligro' }).then(() => { const u = D.USUARIOS.find(x => x.id === id); u.dosfa = false; D.ACCESOS.unshift({ cuando: 'Hoy ' + D.HOY.hora, quien: S.usuario.nombre, que: 'Reseteó el código de ' + u.nombre, donde: 'Este equipo' }); A.pintarFicha(); A.pintarPagina(); A.aviso('Código reseteado. Quedó en el registro de accesos.'); }).catch(() => {});
   ACC.reenviar = () => A.aviso('Invitación reenviada. El enlace vale 48 horas y sirve una sola vez. (Simulado)');
-  ACC['confirmar-u'] = id => A.pedirCodigo('Confirmar el acceso de ' + D.USUARIOS.find(x => x.id === id).nombre + ' con el rol que tiene.').then(() => { const u = D.USUARIOS.find(x => x.id === id); u.estado = 'invitada'; u.ultimo = 'Invitación enviada hoy'; A.auditar({ modulo: 'Usuarios', registro: A.nombreDe(u), campo: 'estado', antes: 'por confirmar', despues: 'invitada' }); A.pintarFicha(); A.pintarPagina(); A.aviso('Le llegará la invitación por correo.'); }).catch(() => {});
+  ACC['confirmar-u'] = id => A.pedirCodigo((u => ({ que: 'Acceso de ' + esc(A.nombreDe(u)) + ' · ' + esc(D.ROLES[u.rol].nombre), det: 'Le llega la invitación por correo (' + esc(u.correo) + ').', boton: 'Confirmar el acceso' }))(D.USUARIOS.find(x => x.id === id))).then(() => { const u = D.USUARIOS.find(x => x.id === id); u.estado = 'invitada'; u.ultimo = 'Invitación enviada hoy'; A.auditar({ modulo: 'Usuarios', registro: A.nombreDe(u), campo: 'estado', antes: 'por confirmar', despues: 'invitada' }); A.pintarFicha(); A.pintarPagina(); A.aviso('Le llegará la invitación por correo.'); }).catch(() => {});
   ACC.invitar = () => {
     const env = $('#modal-raiz');
-    env.innerHTML = `<div class="modal-env"><div class="modal" role="dialog" aria-modal="true"><h2>Invitar a alguien</h2>
+    A.modal(`<h2 id="modal-t">Invitar a alguien</h2>
       <label class="campo" for="inv-nombre"><span>Nombre</span><input id="inv-nombre" placeholder="Nombre y apellido"></label>
       <label class="campo" for="inv-correo"><span>Correo</span><input id="inv-correo" type="email" placeholder="persona@correo.com"></label>
       <label class="campo" for="inv-rol"><span>Rol</span><select id="inv-rol">${Object.entries(D.ROLES).filter(([k]) => k !== 'dueno').map(([k, r]) => `<option value="${k}">${esc(r.nombre)}</option>`).join('')}</select></label>
       <p class="muted">Le llega un enlace de un solo uso (vale 48 horas). Crea su clave, activa el código y entra en modo aprendiz 14 días.</p>
-      <div class="modal-acc"><button class="btn sec" data-inv="no">Cancelar</button><button class="btn pri" data-inv="si">Enviar invitación</button></div></div></div>`;
+      <div class="modal-acc"><button class="btn sec" data-inv="no">Cancelar</button><button class="btn pri" data-inv="si">Enviar invitación</button></div>`, 'teclado');
     $('#inv-nombre').focus();
     env.onclick = e => {
       const b = e.target.closest('[data-inv]'); if (!b) return;
-      if (b.dataset.inv === 'no') { env.innerHTML = ''; return; }
+      if (b.dataset.inv === 'no') { A.cerrarModal(); return; }
       const nombre = $('#inv-nombre').value.trim(); const correo = $('#inv-correo').value.trim();
       if (!nombre || !correo.includes('@')) { $('#inv-nombre').focus(); return; }
-      A.pedirCodigo('Invitar a ' + nombre + '.').then(() => {
-        const rol = $('#inv-rol') ? $('#inv-rol').value : 'consulta';
+      // el rol se lee antes de abrir la ventana del código (después, el formulario ya no está)
+      const rol = $('#inv-rol') ? $('#inv-rol').value : 'consulta';
+      A.pedirCodigo({ que: 'Invitar a ' + esc(nombre) + ' · ' + esc(D.ROLES[rol].nombre), det: 'Le llega un enlace de un solo uso a ' + esc(correo) + '.', boton: 'Enviar la invitación' }).then(() => {
         D.USUARIOS.push({ id: 'u' + Date.now(), nombre, apellido: '', rol, correo, estado: 'invitada', ultimo: 'Invitación enviada hoy', dosfa: false, extra: [], tabs: ['inicio'] });
         A.auditar({ modulo: 'Usuarios', registro: nombre, campo: 'invitación', despues: 'rol ' + D.ROLES[rol].nombre });
         A.pintarPagina(); A.aviso('Invitación enviada a ' + correo + '. (Simulado)');
@@ -116,11 +118,11 @@
       bloques: [{ filas: [{ l: 'Qué puede', v: esc(s.puede), largo: true }, { l: 'A nombre de quién queda', v: s.modo === 'si_cuadra' ? 'De quien mandó la foto' : s.modo === 'propone' ? 'De quien lo aprueba' : 'Del bot' }, { l: 'Humano responsable', v: esc(s.responsable) }, { l: 'Vence la clave', v: esc(s.vence) }, { l: 'Último uso', v: esc(s.ultimo) }, { l: 'Límite', v: '120 llamadas por minuto' }] }, { html: `<p class="muted">La clave se guarda cifrada y se ve una sola vez al crearla. ${aNombre}</p>` }],
       acciones: [{ txt: 'Revocar la clave', acc: 'revocar', arg: id, icono: 'anular', tono: 'peligro', solo: 'aprobar' }] };
   };
-  ACC.revocar = id => A.pedirCodigo('Revocar la clave de ' + D.SERVICIO.find(x => x.id === id).nombre + '. Dejará de funcionar al instante.').then(() => A.aviso('Clave revocada. (Simulado)')).catch(() => {});
+  ACC.revocar = id => A.pedirCodigo({ que: 'Revocar la clave de ' + esc(D.SERVICIO.find(x => x.id === id).nombre), det: 'Deja de funcionar al instante.', boton: 'Revocar la clave', tono: 'peligro' }).then(() => A.aviso('Clave revocada. (Simulado)')).catch(() => {});
 
   /* =============== PARÁMETROS =============== */
   const P = D.PARAMS; P.costosFijos = 38060;
-  const filaParam = (clave, etq, valor, extra = '') => `<li><button class="fila" data-abrir="param:${clave}"><span class="medio"><b>${esc(etq)}</b><small>${extra}</small></span><span class="fin"><span class="monto" style="font-weight:500;text-align:right">${valor}</span>${ic('derecha', 's chev')}</span></button></li>`;
+  const filaParam = (clave, etq, valor, extra = '') => `<li><button class="fila" data-abrir="param:${clave}"><span class="medio"><b>${esc(etq)}</b><small>${extra}</small></span><span class="fin"><span class="valor">${valor}</span>${ic('derecha', 's chev')}</span></button></li>`;
   function negocio() {
     const N = P.negocio; const s = P.sedes[0];
     return `<div class="rejilla"><div class="c6 pila"><article class="hoja"><h2>Negocio</h2><ul class="lista" style="border:0">
@@ -146,8 +148,9 @@
   }
   function antifraude() {
     const edita = puede('parametros', 'aprobar');
-    return `<p class="desc">Alertas fijas que avisan a Alejandro cuando algo huele mal. Apagar una pide tu código.</p>
-      <ul class="lista">${P.antifraude.map(r => `<li><div class="fila"><span class="lead ${r.activa ? 'ok' : ''}">${ic('escudo')}</span><span class="medio"><b>${esc(r.nombre)}</b><small>${esc(r.detalle)}</small></span><label class="interruptor"><input type="checkbox" data-af="${r.id}" ${r.activa ? 'checked' : ''} ${edita ? '' : 'disabled'} aria-label="${esc(r.nombre)}"></label></div></li>`).join('')}</ul>`;
+    // quien no las puede apagar ve si cada alerta está encendida, sin interruptores que no responden
+    return `<p class="desc">Alertas fijas que avisan a Alejandro cuando algo huele mal. ${edita ? 'Apagar una pide tu código.' : 'Las enciende o las apaga ' + esc(A.quienAprueba('parametros')) + '.'}</p>
+      <ul class="lista">${P.antifraude.map(r => `<li><div class="fila"><span class="lead ${r.activa ? 'ok' : ''}">${ic('escudo')}</span><span class="medio"><b>${esc(r.nombre)}</b><small>${esc(r.detalle)}</small></span>${edita ? `<label class="interruptor"><input type="checkbox" data-af="${r.id}" ${r.activa ? 'checked' : ''} aria-label="${esc(r.nombre)}"></label>` : `<span class="tenue">${r.activa ? 'Encendida' : 'Apagada'}</span>`}</div></li>`).join('')}</ul>`;
   }
   function avisos() {
     return `<div class="rejilla"><div class="c7 pila"><article class="hoja"><h2>Qué avisa la app y a dónde</h2><ul class="lista" style="border:0">${P.avisos.map((a, i) => filaParam('av-' + i, a[0], '', esc(a[1]))).join('')}</ul></article></div>
@@ -155,7 +158,8 @@
       <article class="hoja"><h2>Textos de los mensajes</h2><p class="muted">Los textos que manda el bot se pueden editar sin programar (por ejemplo, el aviso a las cajeras).</p>${A.boton('parametros', 'Editar los textos', 'data-acc="pronto"', { tono: 'sec', icono: 'lapiz' })}</article></div></div>`;
   }
   PANT.parametros = {
-    titulo: 'Parámetros', grupo: 'Sistema', icono: 'parametros', mod: 'parametros',
+    titulo: 'Parámetros', grupo: 'Sistema', icono: 'parametros', mod: 'parametros', palabras: 'configuracion ajustes',
+    secciones: [['negocio', 'Negocio y sede', 'rif razon social costos fijos'], ['cuentas', 'Cuentas', 'etiquetas colores'], ['tasas', 'Tasas y valores legales', 'salario minimo cestaticket'], ['catalogos', 'Catálogos', 'metodos de pago categorias'], ['reglas', 'Reglas', 'reglas'], ['antifraude', 'Antifraude', 'alertas fraude'], ['avisos', 'Avisos', 'alarma textos mensajes']],
     render: (sub = 'negocio') => `<div class="pagina">${A.cab('Cómo funciona la app', 'Parámetros', 'Todo lo que se puede ajustar sin programar: datos del negocio, cuentas, tasas, catálogos y reglas. Nada del restaurante está escrito en el código.')}
       ${A.lectura('parametros')}
       ${A.subnav([['negocio', 'Negocio y sede'], ['cuentas', 'Cuentas'], ['tasas', 'Tasas y valores legales'], ['catalogos', 'Catálogos'], ['reglas', 'Reglas'], ['antifraude', 'Antifraude'], ['avisos', 'Avisos'], puede('nomina') ? ['ir-nomina', 'Nómina →'] : null, puede('fiscal') ? ['ir-fiscal', 'Fiscal →'] : null], sub)}
@@ -166,7 +170,7 @@
       raiz.querySelectorAll('[data-af]').forEach(ch => ch.addEventListener('change', () => {
         const r = P.antifraude.find(x => x.id === ch.dataset.af);
         const hacer = () => { r.activa = ch.checked; A.auditar({ modulo: 'Parámetros', registro: 'Alerta: ' + r.nombre, campo: 'activa', antes: ch.checked ? 'no' : 'sí', despues: ch.checked ? 'sí' : 'no' }); A.pintarPagina(); A.aviso(ch.checked ? 'Alerta encendida.' : 'Alerta apagada.'); };
-        if (!ch.checked) A.pedirCodigo('Apagar la alerta «' + r.nombre + '».').then(hacer).catch(() => { ch.checked = true; }); else hacer();
+        if (!ch.checked) A.pedirCodigo({ que: 'Apagar la alerta «' + esc(r.nombre) + '»', det: esc(r.detalle || '') + (r.detalle ? ' · ' : '') + 'Queda en el registro de cambios.', boton: 'Apagar la alerta', tono: 'peligro' }).then(hacer).catch(() => { ch.checked = true; }); else hacer();
       }));
     },
   };
@@ -184,7 +188,7 @@
     else if (arr) { etq = arr[i][0]; obj = { valor: arr[i][1] }; set = v => { arr[i][1] = v; }; if (g === 'leg') nota = 'Vigente ' + arr[i][2] + '. Al cambiarlo, se cierra esta vigencia y empieza una nueva hoy.'; }
     const soloLee = soloDueno && !puede('parametros', 'aprobar');
     return { titulo: etq, sub: 'Parámetro', mod: 'parametros', obj, registro: 'Parámetro: ' + etq,
-      bloques: [{ filas: [{ l: 'Valor', v: tipo === 'dinero' ? dinero(obj[k], 'usd', 0) : esc(obj[k]), campo: soloLee ? undefined : { k, tipo, sensible } }, { l: 'Último cambio', v: '3 oct · Alejandro' }] }]
+      bloques: [{ filas: [{ l: 'Valor', v: tipo === 'dinero' ? dinero(obj[k], 'usd', 0) : esc(A.paraCecilia(obj[k])), campo: soloLee ? undefined : { k, tipo, sensible, obligatorio: tipo === 'dinero' } }, { l: 'Último cambio', v: '3 oct · Alejandro' }] }]
         .concat(soloLee ? [{ html: `<p class="nota gris">${ic('candado', 's')}<span><b>Solo lo cambia el dueño.</b> Los costos fijos los pone Alejandro: si cambiaron, avísale.</span></p>` }] : [])
         .concat(nota ? [{ html: `<p class="muted">${esc(nota)}</p>` }] : []),
       alGuardar: cambios => { if (set) set(cambios[0].nuevo); } };
@@ -192,11 +196,14 @@
 
   /* =============== REGISTRO DE CAMBIOS =============== */
   PANT.auditoria = {
-    titulo: 'Registro de cambios', corto: 'Registro de cambios', grupo: 'Sistema', icono: 'auditoria', mod: 'auditoria',
+    titulo: 'Registro de cambios', corto: 'Registro de cambios', grupo: 'Sistema', icono: 'auditoria', mod: 'auditoria', palabras: 'auditoria historial',
+    secciones: [['cambios', 'Cambios', 'historial'], ['accesos', 'Accesos', 'descargas entradas'], ['alertas', 'Alertas', 'alertas']],
     render: (sub = 'cambios') => {
       let cuerpo = '';
+      // el registro guarda el texto completo: en la tabla se acorta y la ficha del cambio lo muestra entero
+      const corto = t => { const x = String(t ?? ''); return x.length > 70 ? x.slice(0, 67).trimEnd() + '…' : x; };
       if (sub === 'cambios') cuerpo = A.filtros('t-aud', null, null, 'Buscar por persona, módulo o registro') + A.tabla({ id: 't-aud', cols: [{ t: 'Cambio', cls: 'p' }, { t: 'Quién', cls: 'x' }, { t: 'Antes', cls: 'x' }, { t: 'Después', cls: 'r' }, { t: 'Cuándo', cls: 'e' }],
-        filas: D.AUDITORIA.map(a => ({ abrir: 'cambio:' + a.id, celdas: [`<b>${esc(a.modulo)} · ${esc(a.registro)}</b><small>${esc(a.campo)}${a.motivo ? ' · «' + esc(a.motivo) + '»' : ''}</small>`, esc(a.quien) + (a.tipoActor !== 'persona' ? ' ' + tag('Bot', 'lila') : ''), esc(a.antes), esc(a.despues), `<span class="muted nowrap">${esc(a.cuando)}</span>`] })) });
+        filas: D.AUDITORIA.map(a => ({ abrir: 'cambio:' + a.id, txt: a.antes + ' ' + a.despues, celdas: [`<b>${esc(a.modulo)} · ${esc(a.registro)}</b><small>${esc(a.campo)}${a.motivo ? ' · «' + esc(a.motivo) + '»' : ''}</small>`, esc(a.quien) + (a.tipoActor !== 'persona' ? ' ' + tag('Bot', 'lila') : ''), esc(corto(a.antes)), esc(corto(a.despues)), `<span class="muted nowrap">${esc(a.cuando)}</span>`] })) });
       if (sub === 'accesos') cuerpo = A.tabla({ cols: [{ t: 'Qué pasó', cls: 'p' }, { t: 'Dónde', cls: 'x' }, { t: 'Cuándo', cls: 'e' }], filas: D.ACCESOS.map(a => ({ celdas: [`<b>${esc(a.quien)}</b><small>${esc(a.que)}</small>`, esc(a.donde), `<span class="muted nowrap">${esc(a.cuando)}</span>`], clase: a.quien === '¿?' ? '' : '' })) }) + `<p class="muted">Entradas, códigos reseteados, exportaciones y cada descarga de un archivo sensible.</p>`;
       if (sub === 'alertas') cuerpo = `<ul class="lista">
         <li><button class="fila" data-abrir="usuario:jose"><span class="lead alerta">${ic('alerta')}</span><span class="medio"><b>3 claves malas para la cuenta de Jose</b><small>Jue 1 oct 22:41 · desde una IP desconocida · la cuenta no llegó a bloquearse</small></span>${tag('Por revisar', 'aviso')}</button></li>
@@ -209,7 +216,7 @@
 
   /* =============== SALUD DEL SISTEMA =============== */
   PANT.salud = {
-    titulo: 'Salud del sistema', corto: 'Salud del sistema', grupo: 'Sistema', icono: 'salud', mod: 'salud',
+    titulo: 'Salud del sistema', corto: 'Salud del sistema', grupo: 'Sistema', icono: 'salud', mod: 'salud', palabras: 'respaldo whatsapp saldo estado',
     cuenta: () => D.SALUD.filter(h => h.estado !== 'ok').length,
     render: () => `<div class="pagina">${A.cab('¿Está todo funcionando?', 'Salud del sistema', 'Cada pieza se revisa sola. Si algo se cae, suena una alarma en el teléfono de Alejandro, no un correo que nadie lee.')}
       <div class="cifras">${D.SALUD.map(h => `<button class="cifra ${h.estado === 'ok' ? '' : 'aviso'}" data-abrir="salud:${h.id}"><span class="etq">${esc(h.nombre)}</span><b style="font-size:19px;display:flex;align-items:center;gap:6px;color:var(--${h.estado === 'ok' ? 'ok' : 'aviso'})">${ic(h.estado === 'ok' ? 'check' : 'alerta', 's')}${h.estado === 'ok' ? 'Bien' : 'Mirar'}</b><small>${esc(h.detalle)}</small></button>`).join('')}</div>

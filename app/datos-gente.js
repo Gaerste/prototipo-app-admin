@@ -92,7 +92,8 @@
   const REPOSOS = [
     { id: 'rp1', emp: 'e12', tipo: 'reposo', emisor: 'Médico del IVSS', motivo: 'Esguince de tobillo', desde: [30, 8], hasta: [14, 9], dias: 15, convalidado: false, soporte: 'Reposo IVSS 30 sep.jpg', nota: 'Es de la nómina formal: desde el día 4 el IVSS paga 2/3 y el negocio 1/3.' },
     { id: 'rp2', emp: 'e8', tipo: 'justificativo', emisor: 'Clínica privada', motivo: 'Gastroenteritis', desde: [29, 8], hasta: [29, 8], dias: 1, convalidado: true, soporte: 'Justificativo médico 29 sep.jpg', nota: 'Un día: justifica la falta, no hace falta el IVSS.' },
-    { id: 'rp3', emp: 'e4', tipo: 'justificativo', emisor: 'Por subir', motivo: 'Fiebre (avisó por WhatsApp)', desde: [3, 9], hasta: [3, 9], dias: 1, convalidado: false, soporte: '', nota: 'Si no trae el justificativo antes de la nómina, la falta queda injustificada.' },
+    // falta: la falta de ese día (al subir la foto del justificativo, queda junto a ella)
+    { id: 'rp3', emp: 'e4', tipo: 'justificativo', emisor: 'Por subir', motivo: 'Fiebre (avisó por WhatsApp)', desde: [3, 9], hasta: [3, 9], dias: 1, convalidado: false, soporte: '', falta: 'fa1', nota: 'Si no trae el justificativo antes de la nómina, la falta queda injustificada.' },
   ];
   const PERMISOS_EMP = [
     { id: 'pm1', emp: 'e3', fecha: 'Vie 25 sep', horas: 'Turno completo', tipo: 'Remunerado', motivo: 'Cita en el SAIME', soporte: true },
@@ -213,7 +214,11 @@
   // d = [día, mes 0-11] · estado: confirmada, por_confirmar, llego, no_vino, cancelada
   const RESERVAS = [
     { id: 'rs1', d: [5, 9], hora: '19:30', nombre: 'Familia Rodríguez', tel: '0414-•••-2210', personas: 8, area: 'Terraza', mesa: 'T4 + T5', ocasion: 'Cumpleaños', notas: 'Traen su torta: tener velas, platos de postre y cuchillo', canal: 'WhatsApp del restaurante', estado: 'confirmada', abono: 0, tomo: 'Patricia', visitas: 6 },
-    { id: 'rs2', d: [5, 9], hora: '20:00', nombre: 'Carolina Méndez', tel: '0424-•••-7781', personas: 2, area: 'Salón', mesa: 'S12', ocasion: 'Aniversario', notas: 'Mesa tranquila, lejos de la barra', canal: 'Instagram', estado: 'confirmada', abono: 0, tomo: 'Patricia', visitas: 1 },
+    // aviso: el último mensaje al grupo · el de Carolina no salió (el ejemplo de «No salió»: se copia y se manda a mano)
+    { id: 'rs2', d: [5, 9], hora: '20:00', nombre: 'Carolina Méndez', tel: '0424-•••-7781', personas: 2, area: 'Salón', mesa: 'S14', ocasion: 'Aniversario', notas: 'Mesa tranquila, lejos de la barra', canal: 'Instagram', estado: 'confirmada', abono: 0, tomo: 'Patricia', visitas: 1, aviso: { estado: 'no_salio', tipo: 'Cambio en la reserva', hora: '13:58', por: 'El WhatsApp del bot estaba desconectado a esa hora.' } },
+    // un almuerzo de hoy que pasó la hora sin marcar (ya se puede marcar «No vino») y una cena a las 19:45, que en el libro va debajo de la de las 19:30
+    { id: 'rs11', d: [5, 9], hora: '13:00', nombre: 'Almuerzo de la oficina de enfrente', tel: '0412-•••-6620', personas: 6, area: 'Salón', mesa: 'S7 + S8', ocasion: 'Negocios', notas: '', canal: 'Teléfono', estado: 'confirmada', abono: 0, tomo: 'Patricia', visitas: 3 },
+    { id: 'rs12', d: [5, 9], hora: '19:45', nombre: 'Gabriela Suárez', tel: '0414-•••-3317', personas: 3, area: 'Salón', mesa: 'S3', ocasion: '', notas: 'Avisó que puede llegar un poco tarde', canal: 'WhatsApp del restaurante', estado: 'por_confirmar', abono: 0, tomo: 'Patricia', visitas: 1 },
     { id: 'rs3', d: [6, 9], hora: '13:00', nombre: 'Inversiones Delta (almuerzo de trabajo)', tel: '0241-•••-4400', personas: 12, area: 'Salón privado', mesa: 'Privado', ocasion: 'Negocios', notas: 'Piden factura a nombre de la empresa', canal: 'Teléfono', estado: 'por_confirmar', abono: 60, abonoOk: false, tomo: 'Alejandro', visitas: 2 },
     { id: 'rs4', d: [9, 9], hora: '20:30', nombre: 'Andrea Paz', tel: '0412-•••-3092', personas: 6, area: 'Terraza', mesa: 'T2', ocasion: 'Cumpleaños', notas: '', canal: 'WhatsApp del restaurante', estado: 'confirmada', abono: 0, tomo: 'Patricia', visitas: 3 },
     { id: 'rs5', d: [10, 9], hora: '21:00', nombre: 'José Luis Herrera', tel: '0414-•••-5527', personas: 4, area: 'Salón', mesa: 'S5', ocasion: '', notas: 'Una silla para bebé', canal: 'WhatsApp del restaurante', estado: 'por_confirmar', abono: 0, tomo: 'Patricia', visitas: 0 },
