@@ -103,10 +103,15 @@
       }).catch(() => {});
     };
   };
+  // las personas que pueden tener un tope: quien está activa y no es el dueño (el dueño no tiene tope), sola o de a dos
+  const quienTope = ids => ids.length ? ids.map(i => (D.USUARIOS.find(u => u.id === i) || {}).nombre || i).join(' o ') : 'Solo Alejandro';
+  const opcionesTope = () => { const us = D.USUARIOS.filter(u => u.rol !== 'dueno' && !['sin_acceso', 'invitada'].includes(u.estado)); const ops = [['', 'Solo Alejandro']].concat(us.map(u => [u.id, u.nombre]));
+    D.LIMITES.forEach(l => { const k = (l.ids || []).join(','); if (k && !ops.some(o => o[0] === k)) ops.push([k, quienTope(l.ids)]); }); return ops; };
   FICHAS.limite = id => {
     const l = D.LIMITES.find(x => x.id === id);
     return { titulo: l.que, sub: 'Quién aprueba qué', mod: 'usuarios', obj: l, registro: 'Límite: ' + l.que,
-      bloques: [{ filas: [{ l: 'Quién aprueba', v: esc(l.quien), campo: { k: 'quien', tipo: 'texto' } }, ...(l.cond ? [{ l: 'Condición', v: esc(l.cond) }] : []), { l: 'Hasta ($)', v: l.hasta === null ? 'Sin límite' : dinero(l.hasta, 'usd', 0), campo: l.hasta === null ? undefined : { k: 'hasta', tipo: 'dinero', sensible: true } }, { l: 'Si pasa del límite', v: esc(l.arriba) }] }] };
+      // quién tiene el tope se elige de las personas (se guarda su usuario, no un nombre escrito): a cualquier otra, el tope está por decidir
+      bloques: [{ filas: [{ l: 'Quién aprueba', v: esc(l.quien), campo: l.hasta === null ? undefined : { k: 'ids', tipo: 'select', opciones: opcionesTope(), valor: o => (o.ids || []).join(','), aplicar: (o, v) => { o.ids = v ? String(v).split(',') : []; o.quien = quienTope(o.ids); }, mostrar: v => quienTope(v ? String(v).split(',') : []) } }, ...(l.cond ? [{ l: 'Condición', v: esc(l.cond) }] : []), { l: 'Hasta ($)', v: l.hasta === null ? 'Sin límite' : dinero(l.hasta, 'usd', 0), campo: l.hasta === null ? undefined : { k: 'hasta', tipo: 'dinero', sensible: true } }, { l: 'Si pasa del límite', v: esc(l.arriba) }] }] };
   };
   FICHAS.servicio = id => {
     const s = D.SERVICIO.find(x => x.id === id);
@@ -128,7 +133,7 @@
     return `<div class="rejilla"><div class="c6 pila"><article class="hoja"><h2>Negocio</h2><ul class="lista" style="border:0">
         ${filaParam('n-nombre', 'Nombre', esc(N.nombre))}${filaParam('n-razon', 'Razón social', esc(N.razon))}${filaParam('n-rif', 'RIF', esc(N.rif), 'El último dígito decide el calendario del SENIAT')}${filaParam('n-espec', 'Contribuyente especial', esc(N.espec))}${filaParam('n-zona', 'Zona horaria', esc(N.zona))}${filaParam('n-moneda', 'Moneda base', esc(N.monedaBase))}${filaParam('n-carta', 'Precios de la carta en', esc(N.carta))}</ul></article></div>
       <div class="c6 pila"><article class="hoja"><h2>Sede</h2><ul class="lista" style="border:0">${filaParam('s-nombre', 'Sede', esc(s.nombre), 'Hoy solo existe una. La tabla queda para vender la app a otro restaurante.')}${filaParam('s-corte', 'Hora de corte del día', esc(s.corte), 'Lo vendido antes de las 4:00 cuenta para el día anterior')}</ul></article>
-      <article class="hoja"><h2>Para la meta del día</h2><ul class="lista" style="border:0">${filaParam('costos', 'Costos fijos del mes', dinero(P.costosFijos, 'usd', 0), 'Alquiler, nómina, servicios. Sin este número no hay meta del día. Lo pone el dueño.')}</ul></article></div></div>`;
+      <article class="hoja"><h2>Metas</h2><ul class="lista" style="border:0">${filaParam('costos', 'Costos fijos del mes', dinero(P.costosFijos, 'usd', 0), 'Alquiler, nómina, servicios. Sin este número no hay meta del día. Lo pone el dueño.')}${filaParam('primo', 'Meta de comida + personal', P.metaPrimo == null ? tag('Por fijar', 'aviso') : A.numTxt(P.metaPrimo) + ' %', 'Comida, bebida y personal sobre toda la venta (el costo primo del Inicio). La pone el dueño.')}</ul></article></div></div>`;
   }
   function cuentas() {
     return `${A.tabla({ cols: [{ t: 'Cuenta', cls: 'p' }, { t: 'Tipo', cls: 'x' }, { t: 'Titular o custodio', cls: 'x' }, { t: 'Moneda', cls: 'r' }, { t: 'Etiqueta', cls: 'e' }], filas: D.CUENTAS.map(c => ({ abrir: 'cuenta:' + c.id, celdas: [`<b>${esc(c.nombre)}</b><small>${esc(c.num)}</small>`, esc(c.tipo), esc(c.titular), { bs: 'Bs', usd: '$', usdt: 'USDT' }[c.mon], `<span class="acct" data-c="${c.id}">${c.id}</span>`] })) })}
@@ -141,7 +146,10 @@
   }
   function catalogos() {
     const lista = (t, arr, k) => `<article class="hoja"><div class="hoja-cab"><h2>${t}</h2>${A.boton('parametros', 'Agregar', 'data-acc="pronto"', { tono: 'ghost', icono: 'mas', chico: true })}</div><ul class="lista" style="border:0">${arr.map((x, i) => filaParam(k + '-' + i, Array.isArray(x) ? x[0] : x, Array.isArray(x) ? esc(x[1]) : '')).join('')}</ul></article>`;
-    return `<div class="rejilla"><div class="c6 pila">${lista('Métodos de pago del POS → cuenta', P.metodos, 'met')}${lista('Categorías de proveedor', P.categorias, 'cat')}</div><div class="c6 pila">${lista('Tipos de movimiento', P.tiposMov, 'tmov')}<article class="hoja"><h2>Billetes para los conteos</h2><p>$100 · $50 · $20 · $10 · $5 · $1</p></article></div></div>`;
+    // las mesas de cada área (propuesta): con esta lista, la reserva nueva deja tocar la mesa y muestra cuáles están libres a esa hora
+    const mesas = (P.mesas && P.mesas.areas) || [];
+    const tarjetaMesas = mesas.length ? `<article class="hoja"><div class="hoja-cab"><h2>Mesas del restaurante</h2>${tag('Propuesta', 'aviso')}</div><dl class="kv">${mesas.map(([a2, xs]) => `<div><dt>${esc(a2)}</dt><dd class="largo">${xs.length === 1 ? esc(xs[0]) : esc(xs[0] + ' a ' + xs[xs.length - 1]) + ' <small class="tenue">' + xs.length + ' mesas</small>'}</dd></div>`).join('')}</dl><p class="muted">Con esta lista, en la reserva nueva las mesas se tocan en vez de escribirse y se ven las libres a esa hora. Los nombres son de ejemplo: la lista real la carga quien toma las reservas.</p></article>` : '';
+    return `<div class="rejilla"><div class="c6 pila">${lista('Métodos de pago del POS → cuenta', P.metodos, 'met')}${lista('Categorías de proveedor', P.categorias, 'cat')}</div><div class="c6 pila">${lista('Tipos de movimiento', P.tiposMov, 'tmov')}<article class="hoja"><h2>Billetes para los conteos</h2><p>${[100, 50, 20, 10, 5, 1].map(d => dinero(d, 'usd', 0)).join(' · ')}</p></article>${tarjetaMesas}</div></div>`;
   }
   function reglas() {
     return `<p class="desc">Cada regla se puede ajustar sin programar. Queda en el registro de cambios quién la cambió y por qué.</p><ul class="lista">${P.reglas.map((r, i) => filaParam('reg-' + i, r[0], '', esc(r[1]))).join('')}</ul>`;
@@ -159,7 +167,7 @@
   }
   PANT.parametros = {
     titulo: 'Parámetros', grupo: 'Sistema', icono: 'parametros', mod: 'parametros', palabras: 'configuracion ajustes',
-    secciones: [['negocio', 'Negocio y sede', 'rif razon social costos fijos'], ['cuentas', 'Cuentas', 'etiquetas colores'], ['tasas', 'Tasas y valores legales', 'salario minimo cestaticket'], ['catalogos', 'Catálogos', 'metodos de pago categorias'], ['reglas', 'Reglas', 'reglas'], ['antifraude', 'Antifraude', 'alertas fraude'], ['avisos', 'Avisos', 'alarma textos mensajes']],
+    secciones: [['negocio', 'Negocio y sede', 'rif razon social costos fijos'], ['cuentas', 'Cuentas', 'etiquetas colores'], ['tasas', 'Tasas y valores legales', 'salario minimo cestaticket'], ['catalogos', 'Catálogos', 'metodos de pago categorias mesas'], ['reglas', 'Reglas', 'reglas'], ['antifraude', 'Antifraude', 'alertas fraude'], ['avisos', 'Avisos', 'alarma textos mensajes']],
     render: (sub = 'negocio') => `<div class="pagina">${A.cab('Cómo funciona la app', 'Parámetros', 'Todo lo que se puede ajustar sin programar: datos del negocio, cuentas, tasas, catálogos y reglas. Nada del restaurante está escrito en el código.')}
       ${A.lectura('parametros')}
       ${A.subnav([['negocio', 'Negocio y sede'], ['cuentas', 'Cuentas'], ['tasas', 'Tasas y valores legales'], ['catalogos', 'Catálogos'], ['reglas', 'Reglas'], ['antifraude', 'Antifraude'], ['avisos', 'Avisos'], puede('nomina') ? ['ir-nomina', 'Nómina →'] : null, puede('fiscal') ? ['ir-fiscal', 'Fiscal →'] : null], sub)}
@@ -181,6 +189,8 @@
     const arr = { leg: P.legales, ali: P.alicuotas, met: P.metodos, tmov: P.tiposMov, reg: P.reglas, av: P.avisos }[g];
     // los costos fijos los pone el dueño (decidido): nadie más los cambia, aunque edite parámetros
     if (clave === 'costos') { etq = 'Costos fijos del mes'; obj = { valor: P.costosFijos }; tipo = 'dinero'; set = v => { P.costosFijos = v; }; nota = 'La meta del día se recalcula sola con este número.'; soloDueno = true; }
+    // la meta de comida + personal: por fijar hasta que Alejandro la ponga (vacía, el Inicio dice «meta por fijar»)
+    else if (clave === 'primo') { etq = 'Meta de comida + personal'; obj = { valor: P.metaPrimo }; tipo = 'numero'; set = v => { P.metaPrimo = v; }; nota = 'En % de toda la venta de la semana: comida y bebida, más el personal (las dos nóminas, el 10 % y los aportes). La referencia de un restaurante es 60-65 %. Vacía, el Inicio dice «meta por fijar».'; soloDueno = true; }
     else if (g === 'n') { const map = { nombre: 'nombre', razon: 'razon', rif: 'rif', espec: 'espec', zona: 'zona', moneda: 'monedaBase', carta: 'carta' }; etq = { nombre: 'Nombre', razon: 'Razón social', rif: 'RIF', espec: 'Contribuyente especial', zona: 'Zona horaria', moneda: 'Moneda base', carta: 'Precios de la carta en' }[i]; obj = N; k = map[i]; sensible = i === 'rif'; }
     else if (g === 's') { etq = i === 'corte' ? 'Hora de corte del día' : 'Sede'; obj = s; k = i === 'corte' ? 'corte' : 'nombre'; nota = i === 'corte' ? 'Cada registro guarda su día al nacer: cambiar la hora no reescribe la historia.' : ''; }
     else if (g === 't') { etq = { fuente: 'De dónde salen', respaldo: 'Si no llegan', usdt: 'USDT', finde: 'Fines de semana y feriados' }[i]; obj = P.tasas; k = i; }
@@ -188,8 +198,8 @@
     else if (arr) { etq = arr[i][0]; obj = { valor: arr[i][1] }; set = v => { arr[i][1] = v; }; if (g === 'leg') nota = 'Vigente ' + arr[i][2] + '. Al cambiarlo, se cierra esta vigencia y empieza una nueva hoy.'; }
     const soloLee = soloDueno && !puede('parametros', 'aprobar');
     return { titulo: etq, sub: 'Parámetro', mod: 'parametros', obj, registro: 'Parámetro: ' + etq,
-      bloques: [{ filas: [{ l: 'Valor', v: tipo === 'dinero' ? dinero(obj[k], 'usd', 0) : esc(A.paraCecilia(obj[k])), campo: soloLee ? undefined : { k, tipo, sensible, obligatorio: tipo === 'dinero' } }, { l: 'Último cambio', v: '3 oct · Alejandro' }] }]
-        .concat(soloLee ? [{ html: `<p class="nota gris">${ic('candado', 's')}<span><b>Solo lo cambia el dueño.</b> Los costos fijos los pone Alejandro: si cambiaron, avísale.</span></p>` }] : [])
+      bloques: [{ filas: [{ l: clave === 'primo' ? 'Meta (%)' : 'Valor', v: tipo === 'dinero' ? dinero(obj[k], 'usd', 0) : tipo === 'numero' ? (obj[k] == null ? tag('Por fijar', 'aviso') : A.numTxt(obj[k]) + ' %') : esc(A.paraCecilia(obj[k])), campo: soloLee ? undefined : { k, tipo, sensible, obligatorio: tipo === 'dinero' } }, { l: 'Último cambio', v: clave === 'primo' && obj[k] == null ? 'Nunca se ha fijado' : '3 oct · Alejandro' }] }]
+        .concat(soloLee ? [{ html: `<p class="nota gris">${ic('candado', 's')}<span><b>Solo lo cambia el dueño.</b> ${clave === 'primo' ? 'La meta de comida + personal la fija Alejandro.' : 'Los costos fijos los pone Alejandro: si cambiaron, avísale.'}</span></p>` }] : [])
         .concat(nota ? [{ html: `<p class="muted">${esc(nota)}</p>` }] : []),
       alGuardar: cambios => { if (set) set(cambios[0].nuevo); } };
   };
@@ -221,7 +231,7 @@
     render: () => `<div class="pagina">${A.cab('¿Está todo funcionando?', 'Salud del sistema', 'Cada pieza se revisa sola. Si algo se cae, suena una alarma en el teléfono de Alejandro, no un correo que nadie lee.')}
       <div class="cifras">${D.SALUD.map(h => `<button class="cifra ${h.estado === 'ok' ? '' : 'aviso'}" data-abrir="salud:${h.id}"><span class="etq">${esc(h.nombre)}</span><b style="font-size:19px;display:flex;align-items:center;gap:6px;color:var(--${h.estado === 'ok' ? 'ok' : 'aviso'})">${ic(h.estado === 'ok' ? 'check' : 'alerta', 's')}${h.estado === 'ok' ? 'Bien' : 'Mirar'}</b><small>${esc(h.detalle)}</small></button>`).join('')}</div>
       <div class="rejilla"><div class="c6"><article class="hoja"><h2>Qué tan frescos están los datos</h2><dl class="kv">${D.FRESCURA.map(f => `<div><dt>${esc(f[0])}</dt><dd>${tag(f[1], f[2] === 'gris' ? '' : f[2])}</dd></div>`).join('')}</dl></article></div>
-      <div class="c6"><article class="hoja"><div class="hoja-cab"><h2>Recargas del saldo de IA</h2>${A.boton('salud', 'Anotar una recarga', 'data-acc="pronto"', { tono: 'ghost', icono: 'mas', chico: true, permiso: 'ver' })}</div><dl class="kv"><div><dt>14 sep</dt><dd>US$ 30</dd></div><div><dt>Gasto promedio</dt><dd>≈ US$ 0,70 por día</dd></div><div><dt>Alcanza hasta</dt><dd>≈ 26 de octubre</dd></div></dl></article></div></div></div>`,
+      <div class="c6"><article class="hoja"><div class="hoja-cab"><h2>Recargas del saldo de IA</h2>${A.boton('salud', 'Anotar una recarga', 'data-acc="pronto"', { tono: 'ghost', icono: 'mas', chico: true, permiso: 'ver' })}</div><dl class="kv"><div><dt>14 sep</dt><dd>${dinero(30, 'usd', 0)}</dd></div><div><dt>Gasto promedio</dt><dd>≈ ${dinero(0.7, 'usd')} por día</dd></div><div><dt>Alcanza hasta</dt><dd>≈ 26 de octubre</dd></div></dl></article></div></div></div>`,
   };
   FICHAS.salud = id => {
     const h = D.SALUD.find(x => x.id === id);

@@ -5,6 +5,52 @@ window.DB = (() => {
   const r2 = n => Math.round(n * 100) / 100;
   const pct = (monto, p) => Math.round(Math.round(monto * 100) * p / 100) / 100; // el p % de un monto, redondeado al céntimo
 
+  /* ---------- números y montos ----------
+     El formato vive aquí, al principio de los datos, para que los textos de ejemplo pasen por la misma pieza que las pantallas
+     (el núcleo la reusa: A.fmt y A.dinero son estas). Regla de moneda: lo fiscal en bolívares, como se declara; cada cuenta del banco en
+     su moneda, como su estado de cuenta; proveedores y pagos en la moneda del trato. dinero() no tiene moneda por defecto: cada monto dice
+     la suya. Si alguno no la dice, sale «¿?» y queda anotado en SIN_MONEDA (la prueba automática lo marca). */
+  const fmt = (n, d = 2) => {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    const neg = n < 0; const s = Math.abs(n).toFixed(d); let [i, f] = s.split('.');
+    i = i.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return (neg ? '−' : '') + i + (d ? ',' + f : '');
+  };
+  // el «$», el «Bs» o el «€» van unidos al número con un espacio que no se corta: si el monto no cabe, baja entero al renglón de abajo
+  const NB = ' ';
+  const SIN_MONEDA = [];
+  // una resta va con su signo delante del símbolo, en una sola pieza: «−Bs 214.204,52», «≈ −$ 356,62», «−24,60 USDT» (nunca «− $ 761,30»)
+  const dinero = (n, mon, d) => {
+    if (n === null || n === undefined) return '—';
+    const dd = d ?? 2; const abs = Math.abs(n); const signo = n < 0 && +abs.toFixed(dd) !== 0 ? '−' : ''; const s = fmt(abs, dd);
+    if (mon === 'bs') return signo + 'Bs' + NB + s;
+    if (mon === 'eur') return signo + '€' + NB + s;
+    if (mon === 'usdt') return signo + s + NB + 'USDT';
+    if (mon === 'usd') return signo + '$' + NB + s;
+    const donde = ((new Error().stack || '').split('\n')[2] || '').trim();
+    if (SIN_MONEDA.length < 40 && !SIN_MONEDA.includes(donde)) SIN_MONEDA.push(donde);
+    return signo + '¿?' + NB + s;
+  };
+
+  /* ---------- tasa del dólar BCV de cada día (inventada) ----------
+     La que vale ese día: el sábado, el domingo y el lunes vale la que el BCV publicó el viernes (en un feriado, la del día hábil anterior).
+     Cada documento guarda la suya (la factura, el Z, la retención, el movimiento del banco): con ella sale su «≈ $», y así coincide con
+     Proveedores. Lo que falta por pagar va a la tasa de hoy (TASA.usd) y lo dice. */
+  const TASAS_BCV = {
+    '27 ago': 561.40, '28 ago': 563.05, '29 ago': 566.20, '30 ago': 566.20, '31 ago': 566.20,
+    '1 sep': 567.35, '2 sep': 569.80, '3 sep': 571.30, '4 sep': 572.15, '5 sep': 573.90, '6 sep': 573.90, '7 sep': 573.90,
+    '8 sep': 576.10, '9 sep': 578.30, '10 sep': 580.65, '11 sep': 583.40, '12 sep': 586.30, '13 sep': 586.30, '14 sep': 586.30,
+    '15 sep': 589.12, '16 sep': 590.45, '17 sep': 591.80, '18 sep': 593.10, '19 sep': 594.70, '20 sep': 594.70, '21 sep': 594.70,
+    '22 sep': 596.05, '23 sep': 597.20, '24 sep': 598.35, '25 sep': 599.45, '26 sep': 601.80, '27 sep': 601.80, '28 sep': 601.80,
+    '29 sep': 603.30, '30 sep': 604.95, '1 oct': 607.20, '2 oct': 610.85, '3 oct': 612.40, '4 oct': 612.40, '5 oct': 612.40,
+  };
+  // «25 sep», «Vie 25 sep» o «Hoy» → la tasa de ese día (null si el día no está en el ejemplo)
+  const tasaDel = f => { const k = String(f ?? '').toLowerCase().trim().replace(/^(hoy|lun|mar|mié|jue|vie|sáb|dom)(?=\s|$)\s*/, m => (m.trim() === 'hoy' ? '5 oct' : '')); return TASAS_BCV[k] ?? null; };
+  // el período de un documento: «3 oct» → «2026-10» · y su quincena: del 1 al 15, la 1.ª; del 16 al final, la 2.ª
+  const MES_N = { ago: '08', sep: '09', oct: '10', nov: '11' };
+  const periodoDe = f => { const m = /(\d{1,2}) (\w{3})/.exec(String(f)); return m ? '2026-' + (MES_N[m[2]] || '??') : ''; };
+  const quincenaDe = f => (parseInt(String(f).replace(/^\D+/, ''), 10) <= 15 ? 1 : 2);
+
   /* ---------- personas, roles y permisos ---------- */
   const ROLES = {
     dueno: { nombre: 'Dueño', desc: 'Ve todo, aprueba sin límite y maneja usuarios y parámetros.' },
@@ -35,15 +81,19 @@ window.DB = (() => {
     reservas:       { inicio: 'v', calendario: 'e', caja: '', clientes: '', pagos: '', proveedores: '', personal: '', nomina: '', boveda: '', cajachica: '', bancos: '', tasas: '', fiscal: '', analisis: '', documentos: '', usuarios: '', parametros: '', auditoria: '', salud: '' },
     compras:        { inicio: 'v', calendario: 'v', caja: '', clientes: '', pagos: '', proveedores: 'v', personal: '', nomina: '', boveda: '', cajachica: '', bancos: '', tasas: 'v', fiscal: '', analisis: 'v', documentos: 'v', usuarios: '', parametros: '', auditoria: '', salud: '' },
   };
+  // tabs: las pestañas de abajo del teléfono, según el trabajo de cada quien · una pestaña es una pantalla ('caja') o una sección
+  // ({ ir: 'analisis/precios', t: 'Precios', icono }) · accion: la que hace algo (Nueva reserva) y se ve distinta
+  // entrada: donde entra al abrir la app (quien toma reservas entra por Reservas › Libro de hoy); sin ella, Inicio
   const USUARIOS = [
     { id: 'alejandro', nombre: 'Alejandro', apellido: '', rol: 'dueno', correo: 'alejandro@ejemplo.com', estado: 'activo', ultimo: 'Hoy 7:38 · iPhone', dosfa: true, extra: [], tabs: ['inicio', 'caja', 'pagos', 'boveda'] },
     { id: 'jose', nombre: 'Jose', apellido: '', rol: 'contabilidad', correo: 'jose@ejemplo.com', estado: 'activo', ultimo: 'Hoy 7:12 · computadora', dosfa: true, extra: [], tabs: ['inicio', 'caja', 'pagos', 'fiscal'] },
     { id: 'eliana', nombre: 'Eliana', apellido: '', rol: 'socia', correo: 'eliana@ejemplo.com', estado: 'por_confirmar', confirmar: 'Alejandro todavía no decide si Eliana edita o solo ve. Así se vería si edita.', ultimo: 'Nunca ha entrado', dosfa: false, extra: [], tabs: ['inicio', 'caja', 'pagos', 'boveda'] },
-    { id: 'luis', nombre: 'Luis Roberto', apellido: '', rol: 'consulta', correo: 'luis@ejemplo.com', estado: 'activo', ultimo: 'Ayer 21:05 · iPhone', dosfa: true, extra: ['Registrar su propio retiro de la bóveda'], tabs: ['inicio', 'caja', 'boveda', 'analisis'] },
+    { id: 'luis', nombre: 'Luis Roberto', apellido: '', rol: 'consulta', correo: 'luis@ejemplo.com', estado: 'activo', ultimo: 'Ayer 21:05 · iPhone', dosfa: true, extra: ['Registrar su propio retiro de la bóveda'], tabs: ['inicio', 'caja', { ir: 'cajachica/mios', t: 'Mis retiros', icono: 'cajachica' }, 'analisis'] },
     { id: 'cecilia', nombre: 'Cecilia', apellido: '', rol: 'fiscal_externo', correo: 'cecilia@ejemplo.com', estado: 'aprendiz', aprendiz: 'hasta el 12 de octubre', ultimo: 'Vie 2 oct · computadora', dosfa: true, extra: [], tabs: ['inicio', 'fiscal', 'bancos', 'documentos'] },
     { id: 'andreina', nombre: 'Andreina', apellido: '', rol: 'rrhh', correo: 'andreina@ejemplo.com', estado: 'invitada', ultimo: 'Invitación enviada el 3 oct', dosfa: false, extra: [], tabs: ['inicio', 'personal', 'asistencia', 'nomina'] },
-    { id: 'manuel', nombre: 'Manuel', apellido: '', rol: 'compras', correo: 'manuel@ejemplo.com', estado: 'activo', ultimo: 'Sáb 3 oct · Android', dosfa: true, extra: [], tabs: ['inicio', 'proveedores', 'analisis', 'tasas'] },
-    { id: 'patricia', nombre: 'Patricia', apellido: 'Reyes', rol: 'reservas', correo: 'patricia@ejemplo.com', estado: 'por_confirmar', confirmar: 'Propuesta: la supervisora toma las reservas y arma los eventos. Alejandro decide si se le da usuario.', ultimo: 'Nunca ha entrado', dosfa: false, extra: [], tabs: ['inicio', 'calendario'] },
+    { id: 'manuel', nombre: 'Manuel', apellido: '', rol: 'compras', correo: 'manuel@ejemplo.com', estado: 'activo', ultimo: 'Sáb 3 oct · Android', dosfa: true, extra: [], tabs: ['inicio', 'proveedores', { ir: 'analisis/precios', t: 'Precios', icono: 'etiqueta' }, 'tasas'] },
+    { id: 'patricia', nombre: 'Patricia', apellido: 'Reyes', rol: 'reservas', correo: 'patricia@ejemplo.com', estado: 'por_confirmar', confirmar: 'Propuesta: la supervisora toma las reservas y arma los eventos. Alejandro decide si se le da usuario.', ultimo: 'Nunca ha entrado', dosfa: false, extra: [], entrada: 'calendario/reservas',
+      tabs: [{ ir: 'calendario/reservas', t: 'Reservas', icono: 'cubiertos' }, { ir: 'calendario/mes', t: 'Mes', icono: 'calendario' }, { ir: 'calendario/eventos', t: 'Eventos', icono: 'estrella' }, { ir: 'calendario/nueva', t: 'Nueva reserva', icono: 'mas', accion: true }] },
   ];
   // modo: directo (escribe solo) · propone (una persona aprueba) · si_cuadra (la excepción de la bóveda, 3 oct: registra al instante si todo cuadra)
   const SERVICIO = [
@@ -52,15 +102,17 @@ window.DB = (() => {
     { id: 's3', nombre: 'bot-boveda', tipo: 'bot', responsable: 'Jose', puede: 'Registrar las fotos del grupo de bóveda: al instante si todo cuadra, a nombre de quien mandó la foto y marcado «sin doble factor». Si algo falla, queda «por revisar»', modo: 'si_cuadra', vence: '31 dic 2026', ultimo: 'Todavía no se usa: el grupo está por crear' },
     { id: 's4', nombre: 'agente-facturas', tipo: 'agente', responsable: 'Jose', puede: 'Proponer facturas leídas de las fotos. Nunca aprueba.', modo: 'propone', vence: '30 nov 2026', ultimo: 'Ayer 18:20' },
   ];
+  // ids: quiénes tienen ese tope (por su usuario, no por un nombre dentro de un texto) · quien: cómo se lee · a cualquier otra persona que
+  // edite, salvo el dueño, el tope está «por decidir» y vale 0: lo que haga queda pendiente de quien está arriba
   const LIMITES = [
-    { id: 'l1', que: 'Salidas de la bóveda', quien: 'Jose', hasta: 200, mon: 'usd', arriba: 'Alejandro' },
-    { id: 'l2', que: 'Devoluciones a clientes', quien: 'Jose', hasta: 100, mon: 'usd', arriba: 'Alejandro' },
-    { id: 'l3', que: 'Crédito a un cliente', quien: 'Jose o Luis', hasta: 100, mon: 'usd', arriba: 'Alejandro' },
-    { id: 'l4', que: 'Lote de pagos del lunes', quien: 'Solo Alejandro', hasta: null, mon: 'usd', arriba: '—' },
-    { id: 'l5', que: 'Ajuste de una factura', quien: 'Jose', hasta: 50, mon: 'usd', arriba: 'Alejandro' },
-    { id: 'l6', que: 'Gasto de caja chica', quien: 'Jose', hasta: 40, mon: 'usd', arriba: 'Alejandro' },
-    { id: 'l7', que: 'Préstamo a un empleado', quien: 'Solo Alejandro', hasta: null, mon: 'usd', arriba: '—' },
-    { id: 'l8', que: 'Adelanto de quincena (propuesta)', quien: 'Jose', cond: 'si lo anota otra persona (si lo anota él, Alejandro)', hasta: 60, mon: 'usd', arriba: 'Alejandro' }, // quien prepara no aprueba
+    { id: 'l1', que: 'Salidas de la bóveda', ids: ['jose'], quien: 'Jose', hasta: 200, mon: 'usd', arriba: 'Alejandro' },
+    { id: 'l2', que: 'Devoluciones a clientes', ids: ['jose'], quien: 'Jose', hasta: 100, mon: 'usd', arriba: 'Alejandro' },
+    { id: 'l3', que: 'Crédito a un cliente', ids: ['jose', 'luis'], quien: 'Jose o Luis', hasta: 100, mon: 'usd', arriba: 'Alejandro' },
+    { id: 'l4', que: 'Lote de pagos del lunes', ids: [], quien: 'Solo Alejandro', hasta: null, mon: 'usd', arriba: '—' },
+    { id: 'l5', que: 'Ajuste de una factura', ids: ['jose'], quien: 'Jose', hasta: 50, mon: 'usd', arriba: 'Alejandro' },
+    { id: 'l6', que: 'Gasto de caja chica', ids: ['jose'], quien: 'Jose', hasta: 40, mon: 'usd', arriba: 'Alejandro' },
+    { id: 'l7', que: 'Préstamo a un empleado', ids: [], quien: 'Solo Alejandro', hasta: null, mon: 'usd', arriba: '—' },
+    { id: 'l8', que: 'Adelanto de quincena (propuesta)', ids: ['jose'], quien: 'Jose', cond: 'si lo anota otra persona (si lo anota él, Alejandro)', hasta: 60, mon: 'usd', arriba: 'Alejandro' }, // quien prepara no aprueba
   ];
   const SESIONES = [
     { id: 'se1', disp: 'iPhone · Safari', donde: 'Valencia', desde: 'Hoy 7:38', actual: true },
@@ -97,25 +149,34 @@ window.DB = (() => {
   ];
 
   /* ---------- pendientes ---------- */
+  // cada pendiente guarda dónde se resuelve: la pantalla (ir), la sección (sub2) y la ficha (abrir) · «Abrir» va a esa sección, abre la ficha
+  // y arriba de la ficha queda «‹ el pendiente», para volver a marcarlo · el aviso del bot lleva ese mismo enlace
   const PENDIENTES = [
     { id: 'pe1', para: ['alejandro', 'jose'], tipo: 'alerta', titulo: '4 pagos por confirmar en Caja', sub: 'El más viejo es de las 12:40', de: 'El bot', edad: '1 h', ir: 'caja' },
-    { id: 'pe2', para: ['alejandro'], tipo: 'alerta', titulo: 'Un proveedor cambió de cuenta', sub: 'Hortalizas El Valle · pide tu código', de: 'Jose', edad: '3 días', ir: 'pagos', prov: 'p4' },
+    { id: 'pe2', para: ['alejandro'], tipo: 'alerta', titulo: 'Un proveedor cambió de cuenta', sub: 'Hortalizas El Valle · pide tu código', de: 'Jose', edad: '3 días', ir: 'pagos', sub2: 'lunes', abrir: 'proveedor:p4', prov: 'p4' },
     { id: 'pe18', para: ['alejandro'], tipo: 'alerta', titulo: 'Una persona del personal cambió de cuenta', sub: 'Yohana Blanco · confírmala con ella antes de pagarle el 15', de: 'Andreina', edad: '4 días', ir: 'pagos', sub2: 'nomina', emp: 'e5' },
-    { id: 'pe3', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar una devolución a un cliente', sub: 'María Gutiérrez · $ 25,00 por un pago doble · la preparó Jose', de: 'Jose', edad: '1 día', abrir: 'devcliente:dc1' },
-    { id: 'pe4', para: ['alejandro', 'manuel'], tipo: 'escalado', titulo: 'No llegó la reposición del queso', sub: 'Subió a ti hace 2 días · era de Manuel', de: 'Manuel', edad: '4 días', abrir: 'devolucion:dv1' },
-    { id: 'pe5', para: ['cecilia', 'jose', 'alejandro'], tipo: 'aviso', titulo: 'IVA de la 2.ª quincena de septiembre', sub: 'Vence mañana · Jose tiene que revisarlo', de: 'Cecilia', edad: 'Hoy', abrir: 'obligacion:o1' },
-    { id: 'pe6', para: ['cecilia', 'jose'], tipo: 'aviso', titulo: 'Faltan 2 reportes Z de septiembre', sub: 'Días 13 y 27 · sin el Z no cierra el libro de ventas', de: 'La app', edad: '2 días', ir: 'fiscal', sub2: 'z' },
-    { id: 'pe7', para: ['alejandro', 'jose', 'cecilia'], tipo: 'alerta', titulo: 'Inspección de la máquina fiscal vencida', sub: 'Venció el 28 de septiembre', de: 'La app', edad: '7 días', abrir: 'maquina:m1' },
-    { id: 'pe8', para: ['andreina', 'jose', 'alejandro'], tipo: 'aviso', titulo: 'Preparar la nómina del 15 de octubre', sub: 'Falta el reporte del reloj', de: 'La app', edad: 'Hoy', ir: 'nomina' },
+    { id: 'pe3', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar una devolución a un cliente', sub: 'María Gutiérrez · ' + dinero(25, 'usd') + ' por un pago doble · la preparó Jose', de: 'Jose', edad: '1 día', ir: 'clientes', sub2: 'deben', abrir: 'devcliente:dc1' },
+    { id: 'pe4', para: ['alejandro', 'jose'], tipo: 'escalado', titulo: 'No llegó la reposición del queso', sub: 'Lleva 4 días · ya subió a Alejandro · la registró Manuel', subs: { alejandro: 'Subió a ti hace 2 días: nadie la marcó · la registró Manuel' }, de: 'Manuel', edad: '4 días', ir: 'proveedores', sub2: 'devoluciones', abrir: 'devolucion:dv1' },
+    { id: 'pe5', para: ['jose', 'alejandro'], tipo: 'aviso', titulo: 'Revisar el IVA de la 2.ª quincena de septiembre', sub: 'Vence mañana · lo preparó Cecilia', subs: { alejandro: 'Vence mañana · lo preparó Cecilia y lo revisa Jose' }, de: 'Cecilia', edad: 'Hoy', ir: 'fiscal', sub2: 'iva', abrir: 'obligacion:o1' },
+    { id: 'pe6', para: ['jose'], tipo: 'aviso', titulo: 'Subir los 2 reportes Z que faltan de septiembre', sub: 'Días 13 y 27 · sin el Z no cierra el libro de ventas', de: 'La app', edad: '2 días', ir: 'fiscal', sub2: 'z' },
+    { id: 'pe7', para: ['alejandro', 'jose'], tipo: 'alerta', titulo: 'Inspección de la máquina fiscal vencida', sub: 'Venció el 28 de septiembre · hay que llamar al técnico', de: 'La app', edad: '7 días', ir: 'fiscal', sub2: 'permisos', abrir: 'maquina:m1' },
+    // la nómina: cada paso es su propio pendiente (lo que resuelve una persona no le borra el suyo a la otra) · el de Jose espera al de Andreina:
+    // mientras tanto no se marca resuelto
+    { id: 'pe8', para: ['andreina'], tipo: 'aviso', titulo: 'Preparar la nómina del 15 de octubre', sub: 'Falta el reporte del reloj', de: 'La app', edad: 'Hoy', ir: 'nomina', sub2: 'quincena' },
+    { id: 'pe8r', para: ['jose'], tipo: 'aviso', titulo: 'Revisar la nómina del 15 de octubre', sub: 'Cuando Andreina la prepare · falta el reporte del reloj', espera: 'pe8', esperaTxt: 'Andreina la prepare', listo: 'Andreina ya la preparó: te toca revisarla', de: 'La app', edad: 'Hoy', ir: 'nomina', sub2: 'quincena' },
     { id: 'pe9', para: ['jose', 'alejandro'], tipo: 'aviso', titulo: 'Subir el estado de cuenta de septiembre del BNC', sub: 'Los otros 3 bancos ya están conciliados', de: 'La app', edad: '3 días', ir: 'bancos', sub2: 'conciliacion', abrir: 'conciliacion:BNC' },
     { id: 'pe10', para: ['manuel', 'alejandro'], tipo: 'info', titulo: 'El queso telita subió 9 %', sub: 'Quesera Los Andes · otro proveedor lo vendió 6 % más barato', de: 'Radar de precios', edad: 'Hoy', ir: 'analisis', sub2: 'precios', abrir: 'insumo:i1' },
-    { id: 'pe12', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar un préstamo de $ 200', sub: 'Rosa Medina · 4 cuotas de $ 50 · está en período de prueba', de: 'Jose', edad: 'Hoy', abrir: 'prestamo:pr4' },
-    { id: 'pe13', para: ['alejandro', 'jose'], tipo: 'alerta', titulo: 'La liquidación de Gabriela Núñez vence hoy', sub: 'Renunció el 30 sep · hay 5 días para pagarla · $ 237,60', de: 'La app', edad: 'Hoy', abrir: 'liquidacion:lq1' },
-    { id: 'pe14', para: ['andreina', 'alejandro'], tipo: 'aviso', titulo: 'Clasificar la falta de Kevin Torres', sub: 'Sáb 3 oct · avisó que estaba enfermo, falta el justificativo', de: 'La app', edad: '2 días', abrir: 'falta:fa1' },
+    { id: 'pe12', para: ['alejandro'], tipo: 'info', titulo: 'Aprobar un préstamo de ' + dinero(200, 'usd', 0), sub: 'Rosa Medina · 4 cuotas de ' + dinero(50, 'usd', 0) + ' · está en período de prueba', de: 'Jose', edad: 'Hoy', ir: 'prestamos', sub2: 'prestamos', abrir: 'prestamo:pr4' },
+    { id: 'pe13', para: ['alejandro'], tipo: 'alerta', titulo: 'La liquidación de Gabriela Núñez vence hoy', sub: 'Renunció el 30 sep · hay 5 días para pagarla · ' + dinero(237.6, 'usd'), de: 'La app', edad: 'Hoy', ir: 'prestaciones', sub2: 'egresos', abrir: 'liquidacion:lq1' },
+    { id: 'pe14', para: ['andreina', 'alejandro'], tipo: 'aviso', titulo: 'Clasificar la falta de Kevin Torres', sub: 'Sáb 3 oct · avisó que estaba enfermo, falta el justificativo', de: 'La app', edad: '2 días', ir: 'asistencia', sub2: 'faltas', abrir: 'falta:fa1' },
+    // dos avisos del personal con su pendiente (aviso: la clave del aviso): al resolverlo en Personal › Avisos, su pendiente se cierra solo
+    // el del certificado ya subió a Alejandro: nadie lo resolvió en 2 días
+    { id: 'pe19', para: ['andreina', 'alejandro'], tipo: 'escalado', titulo: 'Certificado de salud vencido de José Gregorio Rivas', sub: 'Venció el 20 sep · subió a Alejandro: nadie lo resolvió en 2 días', subs: { alejandro: 'Subió a ti: nadie lo resolvió en 2 días · venció el 20 sep' }, de: 'La app', edad: '15 días', aviso: 'salud:e2', ir: 'personal', sub2: 'avisos', abrir: 'empleado:e2' },
+    { id: 'pe20', para: ['andreina'], tipo: 'aviso', titulo: 'Completar el expediente de Ramón Quintero', sub: 'Falta la cédula y la fecha de nacimiento', de: 'La app', edad: 'Ayer', aviso: 'papeles:e9', ir: 'personal', sub2: 'avisos', abrir: 'empleado:e9' },
     { id: 'pe15', para: ['jose'], tipo: 'aviso', titulo: 'Revisar 3 redobles de esta quincena', sub: 'Kevin, José Gregorio y Jhonny · entran en la nómina del 15', de: 'La app', edad: 'Hoy', ir: 'asistencia', sub2: 'redobles' },
-    { id: 'pe17', para: ['jose'], tipo: 'info', titulo: 'Facturas leídas por el agente', sub: '3 fotos de facturas · apruébalas, corrígelas o recházalas', de: 'agente-facturas', edad: 'Ayer', abrir: 'facagente:lote' },
-    { id: 'pe16', para: ['patricia', 'alejandro'], tipo: 'aviso', titulo: 'Falta el abono de Inversiones Delta', sub: 'Almuerzo de 12 personas mañana a la 13:00 · abono de $ 60', de: 'La app', edad: 'Hoy', abrir: 'reserva:rs3' },
-    { id: 'pe11', para: ['luis', 'alejandro'], tipo: 'info', titulo: 'Tu retiro del sábado quedó registrado', sub: '$ 500 · propuesta (Q5): se descuenta del reparto de utilidades', de: 'La app', edad: '2 días', ir: 'cajachica', sub2: 'socios', abrir: 'retiro:r1' },
+    { id: 'pe17', para: ['jose'], tipo: 'info', titulo: 'Facturas leídas por el agente', sub: '3 fotos de facturas · apruébalas, corrígelas o recházalas', de: 'agente-facturas', edad: 'Ayer', ir: 'proveedores', sub2: 'facturas', abrir: 'facagente:lote' },
+    { id: 'pe16', para: ['patricia', 'alejandro'], tipo: 'aviso', titulo: 'Falta el abono de Inversiones Delta', sub: 'Almuerzo de 12 personas mañana a la 13:00 · abono de ' + dinero(60, 'usd', 0), de: 'La app', edad: 'Hoy', ir: 'calendario', sub2: 'reservas', abrir: 'reserva:rs3' },
+    { id: 'pe11', para: ['luis', 'alejandro'], tipo: 'info', titulo: 'Tu retiro del sábado quedó registrado', titulos: { alejandro: 'El retiro de Luis del sábado quedó registrado' }, sub: dinero(500, 'usd', 0) + ' · propuesta (Q5): se descuenta del reparto de utilidades', de: 'La app', edad: '2 días', ir: 'cajachica', sub2: 'socios', abrir: 'retiro:r1' },
   ];
 
   /* ---------- proveedores, facturas, devoluciones ---------- */
@@ -163,11 +224,14 @@ window.DB = (() => {
     { id: 'f17', prov: 'p1', num: 'A-004480', control: '00-118150', fecha: '21 sep', vence: '28 sep', monto: 1120.00, saldo: 0, estado: 'pagada', origen: 'Odoo', pago: { lote: '28 sep', cta: 'BVCA', antes: 1120.00 } },
   ];
   PROVEEDORES.forEach(p => { p.deuda = r2(FACTURAS.filter(f => f.prov === p.id).reduce((s, f) => s + f.saldo, 0)); });
+  // el teléfono de cada proveedor va aparte del nombre de su contacto: con ese número se verifica una cuenta nueva, así que cambiarlo
+  // se protege igual que su cuenta (pide el código y le avisa a Alejandro)
+  PROVEEDORES.forEach(p => { const m = /^(.*?)\s*\(([^)]+)\)$/.exec(p.contacto || ''); if (m) { p.contacto = m[1]; p.tel = m[2]; } });
   // facturas que el agente leyó de las fotos: los agentes proponen (3 oct), así que no entran a las facturas hasta que Jose o Alejandro las aprueben
   // leido: lo que leyó el agente · si alguien corrige un dato, la ficha deja lo leído tachado al lado
   const FAC_AGENTE = [
-    { id: 'fa1', prov: 'p5', num: 'E-8857', control: '00-338857', fecha: '3 oct', vence: '13 oct', monto: 197.20, leida: 'Ayer 18:20', estado: 'propuesta', lectura: 'Leyó todo. Base $ 170,00 + IVA $ 27,20 = $ 197,20: cuadra.' },
-    { id: 'fa2', prov: 'p7', num: '1219', control: '00-001219', fecha: '4 oct', vence: '11 oct', monto: 1152.00, leida: 'Ayer 18:20', estado: 'propuesta', duda: 'El monto es 10 veces lo que suele facturar este proveedor (unos $ 100). Revisa la coma en la foto.' },
+    { id: 'fa1', prov: 'p5', num: 'E-8857', control: '00-338857', fecha: '3 oct', vence: '13 oct', monto: 197.20, leida: 'Ayer 18:20', estado: 'propuesta', lectura: 'Leyó todo. Base ' + dinero(170, 'usd') + ' + IVA ' + dinero(27.2, 'usd') + ' = ' + dinero(197.2, 'usd') + ': cuadra.' },
+    { id: 'fa2', prov: 'p7', num: '1219', control: '00-001219', fecha: '4 oct', vence: '11 oct', monto: 1152.00, leida: 'Ayer 18:20', estado: 'propuesta', duda: 'El monto es 10 veces lo que suele facturar este proveedor (unos ' + dinero(100, 'usd', 0) + '). Revisa la coma en la foto.' },
     { id: 'fa3', prov: 'p1', num: 'A-004533', control: '00-118260', fecha: '30 sep', vence: '7 oct', monto: 860.00, leida: 'Ayer 18:20', estado: 'propuesta', duda: 'Ya está en las facturas: llegó con la copia de Odoo del domingo.', repetida: 'f2' },
   ];
   FAC_AGENTE.forEach(x => { x.leido = { num: x.num, control: x.control, fecha: x.fecha, monto: x.monto }; });
@@ -188,7 +252,7 @@ window.DB = (() => {
     { p: 'p5', f: '1 factura', v: 'Mañana', m: 312.40, c: 'BVCA', cap: 312.40 },
     { p: 'p6', f: '1 factura', v: 'Hoy', m: 180.00, c: null },
     { p: 'p7', f: '1 factura', v: 'Hoy', m: 96.00, c: 'BVCE', cap: 96.00 },
-    { p: 'p8', f: '2 facturas', v: 'Mañana', m: 964.80, c: 'BVCA', cap: 964.80, duda: 'pollos' },
+    { p: 'p8', f: '2 facturas', v: 'Mañana', m: 964.80, c: 'BVCA', cap: 964.80, duda: 'pollos', hora: '10:42', intento2: { hora: '10:44', ref: '0041207' } }, // dos capturas iguales: la 2.ª (10:44) pudo ser otro intento del mismo pago
     { p: 'p9', f: '1 factura', v: 'Hoy', m: 74.30, c: null },
     { p: 'p10', f: '1 factura', v: 'Hace 5 días', tarde: true, m: 442.24, c: 'BVCJ', cap: 442.24 }, // 450,00 − 7,76 de retención de ISLR
     { p: 'p11', f: '1 factura', v: 'Hoy', m: 268.90, c: null },
@@ -249,7 +313,7 @@ window.DB = (() => {
   const RETIROS = [
     { id: 'r1', socio: 'Luis Roberto', fecha: 'Sáb 3 oct', monto: 500, de: 'Bóveda', para: 'Retiro personal', via: 'App con código' },
     { id: 'r2', socio: 'Alejandro', fecha: 'Mié 30 sep', monto: 400, de: 'Bóveda', para: 'Retiro personal', via: 'App con código' },
-    { id: 'r4', socio: 'Luis Roberto', fecha: 'Jue 1 oct', monto: 48, de: 'Consumo de septiembre', para: 'Lo que pasó del tope de consumo ($ 548 de $ 500)', via: 'Cierre automático del mes' },
+    { id: 'r4', socio: 'Luis Roberto', fecha: 'Jue 1 oct', monto: 48, de: 'Consumo de septiembre', para: 'Lo que pasó del tope de consumo (' + dinero(548, 'usd', 0) + ' de ' + dinero(500, 'usd', 0) + ')', via: 'Cierre automático del mes' },
   ];
   // plata que alguien se lleva para pagar algo: se cierra con las facturas o con el vuelto, que registran Jose o Alejandro a nombre de quien rinde
   const POR_RENDIR = [
@@ -266,14 +330,16 @@ window.DB = (() => {
     { id: 'BVCJ', mes: 'Septiembre', estado: 'diferencias', subido: 'Vie 2 oct', por: 'Jose' },
     { id: 'BNC', mes: 'Septiembre', estado: 'falta', subido: '—', por: '—' },
   ];
+  // cada diferencia va en la moneda de su cuenta, como en el estado de cuenta (BVCJ: bolívares) · guarda la tasa de su día, que da su «≈ $»
   const DIFERENCIAS = [
-    { id: 'd1', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '12 sep', desc: 'Transferencia a «Servicios Técnicos 2020»', monto: 145.00 },
-    { id: 'd2', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '23 sep', desc: 'Comisión del banco', monto: 3.20, comision: true }, // la línea del banco dice que es una comisión: solo ella se aclara como comisión
-    { id: 'd3', cuenta: 'BVCJ', tipo: 'Comprobante que no aparece en el banco', fecha: '28 sep', desc: 'Pago a Frío Total ref. 00419921', monto: 450.00 },
-    { id: 'd4', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '14 sep', desc: 'Pago móvil de 0412-•••-4410', monto: 61.30 },
-    { id: 'd5', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '19 sep', desc: 'Transferencia de «Inversiones R&M»', monto: 220.00 },
-    { id: 'd6', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '29 sep', desc: 'Pago móvil de 0424-•••-9902', monto: 18.40 },
+    { id: 'd1', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '12 sep', desc: 'Transferencia a «Servicios Técnicos 2020»', monto: 85013.50 },
+    { id: 'd2', cuenta: 'BVCJ', tipo: 'Salió sin comprobante', fecha: '23 sep', desc: 'Comisión del banco', monto: 1911.04, comision: true }, // la línea del banco dice que es una comisión: solo ella se aclara como comisión
+    { id: 'd3', cuenta: 'BVCJ', tipo: 'Comprobante que no aparece en el banco', fecha: '28 sep', desc: 'Pago a Frío Total ref. 00419921', monto: 270810.00 },
+    { id: 'd4', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '14 sep', desc: 'Pago móvil de 0412-•••-4410', monto: 35940.19 },
+    { id: 'd5', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '19 sep', desc: 'Transferencia de «Inversiones R&M»', monto: 130834.00 },
+    { id: 'd6', cuenta: 'BVCJ', tipo: 'Entró sin identificar', fecha: '29 sep', desc: 'Pago móvil de 0424-•••-9902', monto: 11100.72 },
   ];
+  DIFERENCIAS.forEach(d => { d.mon = (CUENTAS.find(c => c.id === d.cuenta) || {}).mon || 'bs'; d.tasa = tasaDel(d.fecha); d.usd = d.mon === 'bs' ? r2(d.monto / d.tasa) : d.monto; });
 
   /* ---------- personal y nómina ---------- */
   const EMPLEADOS = []; // se llena en datos-gente.js
@@ -314,59 +380,99 @@ window.DB = (() => {
 
   /* ---------- fiscal ---------- */
   // nómina formal (10 personas): lo pagado en Bs a la tasa BCV de cada día de pago (inventado)
-  // el salario es el mínimo (Bs 130 al mes) · el 10 % de servicio es salario · el incremento del cestaticket es un bono que no es salario
+  // el salario es el mínimo (130 Bs al mes) · el 10 % de servicio es salario · el incremento del cestaticket es un bono que no es salario
   // en septiembre la nómina no trajo recargos de noche ni de domingo: llegan con el motor de nómina (desde la quincena del 15 de octubre)
   // diezEur: la parte de la nómina formal en el 10 % de cada mes, en euros, con la tasa euro BCV del día en que se pagó (la de agosto y septiembre es la de su corrida)
+  // pagos: cada día de pago del trimestre con su tasa BCV (las de julio, inventadas): con ellas sale el «≈ $» de cada base
   const corridaDiez = id => NOMINA.corridas.find(c => c.id === id);
   const NOMINA_FORMAL = {
-    personas: 10, minimo: 130, pisoUsd: 240, tasaPago: 604.95, // piso de pensiones por persona (Parámetros) · tasa BCV del último pago (30 sep)
+    personas: 10, minimo: 130, pisoUsd: 240, tasaPago: 604.95, quincenaUsd: 3940, // piso de pensiones por persona (Parámetros) · tasa BCV del último pago (30 sep) · lo que se paga cada quincena, en $
     diezEur: { jul: [588.60, 655.20], ago: [corridaDiez('n3d').formalEur, corridaDiez('n3d').tasaEur], sep: [corridaDiez('n1d').formalEur, corridaDiez('n1d').tasaEur] },
+    pagos: { jul: [['15 jul', 512.30], ['31 jul', 531.75]], ago: [['15 ago', 548.60], ['31 ago', 566.20]], sep: [['15 sep', 589.12], ['30 sep', 604.95]] },
   };
   const NF = NOMINA_FORMAL, diezBs = m => r2(NF.diezEur[m][0] * NF.diezEur[m][1]);
-  NF.sep = { minimo: 1300, incremento: 4703335.80, diez: diezBs('sep') }; // quincenas de $ 3.940 a Bs 589,12 (15 sep) y 604,95 (30 sep), menos el mínimo · 10 %: € 629,28 a Bs 701,30
+  NF.sep = { minimo: 1300, incremento: 4703335.80, diez: diezBs('sep') }; // quincenas de 3.940 $ a 589,12 (15 sep) y 604,95 (30 sep), menos el mínimo · 10 %: 629,28 € a 701,30
   NF.t3 = { minimo: 3900, diez: r2(diezBs('jul') + diezBs('ago') + diezBs('sep')), utilidades: 0 }; // el 10 % de julio, agosto y septiembre · las utilidades se pagan en diciembre
   // cada aporte con su propia base, en Bs · el id es el de su obligación en OBLIGACIONES (u05 no tiene: se configura aparte)
   const normalSep = NF.sep.minimo + NF.sep.diez, pisoSep = r2(NF.personas * NF.pisoUsd * NF.tasaPago);
   const PARAFISCALES = [
-    { id: 'o8', ente: 'Pensiones (9 %)', pct: 9, periodo: 'septiembre', base: Math.max(r2(NF.sep.minimo + NF.sep.incremento + NF.sep.diez), pisoSep), piso: pisoSep, corto: 'Septiembre · salario + bonos · piso de $ 240 por persona', que: 'Todo lo pagado en el mes: salario mínimo, incremento del cestaticket y 10 %, a la tasa BCV de cada pago. Nadie quedó por debajo del piso de $ 240.', parte: 'Lo paga todo el negocio', vence: '22 oct' },
-    { id: 'o4', ente: 'IVSS y paro forzoso (16,5 %)', pct: 16.5, periodo: 'septiembre', base: NF.sep.minimo, corto: 'Septiembre · salario mínimo con tope · 12 % el negocio y 4,5 % el trabajador', que: '10 salarios mínimos de Bs 130. El tope es de 5 salarios mínimos por persona (10 en el paro forzoso). Da céntimos, igual que lo que descuenta el recibo.', parte: 'Negocio 12 % (IVSS 10 % y paro 2 %) · trabajador 4,5 % (IVSS 4 % y paro 0,5 %), se le descuenta en el recibo', nota: 'Base exacta: pregunta 8 a Cecilia', vence: '9 oct' },
+    { id: 'o8', ente: 'Pensiones (9 %)', pct: 9, periodo: 'septiembre', base: Math.max(r2(NF.sep.minimo + NF.sep.incremento + NF.sep.diez), pisoSep), piso: pisoSep, corto: 'Septiembre · salario + bonos · piso de ' + dinero(NF.pisoUsd, 'usd', 0) + ' por persona', que: 'Todo lo pagado en el mes: salario mínimo, incremento del cestaticket y 10 %, a la tasa BCV de cada pago. Nadie quedó por debajo del piso de ' + dinero(NF.pisoUsd, 'usd', 0) + '.', parte: 'Lo paga todo el negocio', vence: '22 oct' },
+    { id: 'o4', ente: 'IVSS y paro forzoso (16,5 %)', pct: 16.5, periodo: 'septiembre', base: NF.sep.minimo, corto: 'Septiembre · salario mínimo con tope · 12 % el negocio y 4,5 % el trabajador', que: '10 salarios mínimos de ' + dinero(NF.minimo, 'bs', 0) + '. El tope es de 5 salarios mínimos por persona (10 en el paro forzoso). Da céntimos, igual que lo que descuenta el recibo.', parte: 'Negocio 12 % (IVSS 10 % y paro 2 %) · trabajador 4,5 % (IVSS 4 % y paro 0,5 %), se le descuenta en el recibo', nota: 'Base exacta: pregunta 8 a Cecilia', pregunta: 'q8', vence: '9 oct' },
     { id: 'o5', ente: 'FAOV (3 %)', pct: 3, periodo: 'septiembre', base: r2(normalSep * (1 + 15 / 360 + 30 / 360)), corto: 'Septiembre · salario integral · 2 % el negocio y 1 % el trabajador', que: 'Salario integral: salario mínimo y 10 %, más la parte del bono vacacional (15 días) y de las utilidades (30 días). No tiene tope. Los recargos de noche y de domingo también entran cuando se paguen (en septiembre no hubo).', parte: 'Negocio 2 % · trabajador 1 %. Al trabajador se le descuenta en cada recibo: el de la quincena (sobre su salario) y el del 10 % (sobre su parte del 10 %)', vence: '9 oct' },
     { id: 'o3', ente: 'INCES (2 %)', pct: 2, periodo: 'julio a septiembre', base: r2(NF.t3.minimo + NF.t3.diez), corto: 'Julio a septiembre · salario normal', que: 'Salario normal del trimestre: salario mínimo y 10 %. El incremento del cestaticket no entra.', parte: 'Lo paga todo el negocio', vence: 'Hoy' },
     { id: 'u05', ente: 'INCES (0,5 % de las utilidades)', pct: 0.5, periodo: 'julio a septiembre', base: NF.t3.utilidades, corto: 'Se le retiene a cada trabajador al pagarle las utilidades · en el trimestre no hubo', vence: 'Diciembre', conf: 'INCES 0,5 % de las utilidades' },
   ];
   PARAFISCALES.forEach(p => { p.monto = pct(p.base, p.pct); });
   const montoDe = id => PARAFISCALES.find(p => p.id === id).monto;
+
   // ventas del libro, en Bs y sin IVA (la parte que se declara; las del POS en dólares van en Análisis)
-  // facturas a empresas, con el RIF del cliente: las tres son de la 2.ª quincena de septiembre
-  const VENTAS_EMPRESAS = [
-    { id: 'fv1', fecha: '18 sep', num: '00004410', cliente: 'Constructora Delta', base: 420000.00, iva: 67200.00, esp: true, retencion: 'Esperando su comprobante' },
-    { id: 'fv2', fecha: '22 sep', num: '00004433', cliente: 'Clínica Los Mangos', base: 310000.00, iva: 49600.00, esp: true, retencion: 'Recibido: 37.200,00' },
-    { id: 'fv3', fecha: '28 sep', num: '00004461', cliente: 'Colegio San Ignacio', base: 250000.00, iva: 40000.00, esp: false, retencion: 'No retiene' },
+  // los reportes Z de septiembre, uno por día: [día, base gravada, exento, IGTF, facturas], en Bs · null: no se ha subido
+  // el número del Z sigue al día (el del 30 sep es el 1488: el del día d es el 1458 + d) · el IVA es el 16 % de la base · cada Z guarda la tasa de su día
+  // el del dom 13 y el del dom 27 faltan; el del lun 28 está leído y falta que Jose lo confirme
+  const DIA_SEM = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const fechaSep = d => DIA_SEM[(d + 1) % 7] + ' ' + d + ' sep'; // el 1 de septiembre de 2026 es martes
+  const Z_SEP = [
+    [1, 1092000, 22000, 12810, 199], [2, 1287000, 28000, 15090, 234], [3, 1243000, 27000, 14560, 226], [4, 1498000, 34000, 17570, 272],
+    [5, 1633000, 38000, 19150, 296], [6, 1371000, 31000, 16080, 249], [7, 951000, 17000, 11150, 173], [8, 1089000, 21000, 12770, 198],
+    [9, 1296000, 29000, 15200, 236], [10, 1262000, 26000, 14800, 229], [11, 1517000, 35000, 17790, 276], [12, 1641000, 37000, 19240, 298],
+    [13, null], [14, 978000, 19000, 11470, 178], [15, 1149000, 25000, 12800, 209],
+    [16, 1298000, 31000, 16380, 236], [17, 1276000, 30000, 16120, 231], [18, 1512000, 37000, 19110, 274], [19, 1648000, 42000, 20840, 297],
+    [20, 1384000, 35000, 17490, 251], [21, 958000, 19000, 12110, 174], [22, 1104000, 25000, 13950, 200], [23, 1302000, 39000, 16450, 237],
+    [24, 1257000, 36000, 17280, 228], [25, 1490000, 36000, 18840, 262], [26, 1622000, 41000, 20560, 288], [27, null],
+    [28, 964000, 18000, 12280, 176], [29, 1098000, 21000, 14010, 198], [30, 1321000, 32000, 16420, 241],
   ];
-  const baseEmp = r2(VENTAS_EMPRESAS.reduce((s, v) => s + v.base, 0)), ivaEmp = r2(VENTAS_EMPRESAS.reduce((s, v) => s + v.iva, 0));
-  // consumidor final (la suma de los Z) y exento de cada quincena de septiembre
-  const VENTAS_SEP = { q1: { final: 18007000.00, exento: 389000.00 }, q2: { final: 18234000.00, exento: 442000.00 } };
-  const LIBRO_VENTAS = { mes: 'septiembre', final: r2(VENTAS_SEP.q1.final + VENTAS_SEP.q2.final), empresas: baseEmp, ivaEmpresas: ivaEmp, exento: r2(VENTAS_SEP.q1.exento + VENTAS_SEP.q2.exento) };
-  LIBRO_VENTAS.ivaFinal = pct(LIBRO_VENTAS.final, 16);
-  // patente: se paga en Bs · el 4 % de las ventas del mes en el libro (sin IVA) o el mínimo de 20 euros BCV, lo que sea mayor
-  const PATENTE = { mes: 'septiembre', ventas: r2(LIBRO_VENTAS.final + LIBRO_VENTAS.empresas + LIBRO_VENTAS.exento), pct: 4, minimoEur: 20, vence: '20 de octubre' };
-  PATENTE.cuatro = pct(PATENTE.ventas, PATENTE.pct); PATENTE.minimo = r2(PATENTE.minimoEur * TASA.eur); PATENTE.monto = Math.max(PATENTE.cuatro, PATENTE.minimo);
+  const ZETAS = Z_SEP.map(([dia, base = null, exento = null, igtf = null, facturas = null]) => ({
+    id: 'z' + dia, dia, fecha: fechaSep(dia), quincena: dia <= 15 ? 1 : 2, numEsperado: 1458 + dia, num: base === null ? null : 1458 + dia,
+    facturas, base, iva: base === null ? null : pct(base, 16), exento, igtf, tasa: tasaDel(dia + ' sep'),
+    estado: base === null ? 'falta' : dia === 28 ? 'leido' : 'confirmado', por: base === null || dia === 28 ? '—' : 'Jose',
+  })).reverse(); // del más nuevo al más viejo
+  // facturas a empresas, con el RIF del cliente: las tres son de la 2.ª quincena de septiembre · cada una guarda la tasa de su día
+  // retencion: la dice su comprobante (RET_RECIBIDAS, abajo): «Recibido: …», «Esperando su comprobante» o «No retiene»
+  const VENTAS_EMPRESAS = [
+    { id: 'fv1', fecha: '18 sep', num: '00004410', cliente: 'Constructora Delta', base: 420000.00, iva: 67200.00, esp: true },
+    { id: 'fv2', fecha: '22 sep', num: '00004433', cliente: 'Clínica Los Mangos', base: 310000.00, iva: 49600.00, esp: true },
+    { id: 'fv3', fecha: '28 sep', num: '00004461', cliente: 'Colegio San Ignacio', base: 250000.00, iva: 40000.00, esp: false },
+  ];
+  VENTAS_EMPRESAS.forEach(v => { v.tasa = tasaDel(v.fecha); v.quincena = quincenaDe(v.fecha); });
+  // un solo cálculo para lo que cambia cuando llega o se confirma un Z: las ventas de cada quincena, el libro del mes, la patente y la
+  // hoja de IVA. Lo usan los datos al arrancar y Fiscal cada vez que sube un Z (DB.calcularVentas)
+  const VENTAS_SEP = { q1: {}, q2: {} }, LIBRO_VENTAS = { mes: 'septiembre' };
+  const PATENTE = { mes: 'septiembre', pct: 4, minimoEur: 20, vence: '20 de octubre' };
+  const IVA_HOJA = { periodo: '2.ª quincena de septiembre (16 al 30)', vence: 'Mar 6 oct', creditos: [], excedente: 0 };
+  function calcularVentas() {
+    const sumaZ = (q, k) => r2(ZETAS.filter(z => z.quincena === q && z.base !== null).reduce((s, z) => s + z[k], 0));
+    [1, 2].forEach(q => { VENTAS_SEP['q' + q] = { final: sumaZ(q, 'base'), iva: sumaZ(q, 'iva'), exento: sumaZ(q, 'exento'), igtf: sumaZ(q, 'igtf') }; });
+    const baseEmp = r2(VENTAS_EMPRESAS.reduce((s, v) => s + v.base, 0)), ivaEmp = r2(VENTAS_EMPRESAS.reduce((s, v) => s + v.iva, 0));
+    Object.assign(LIBRO_VENTAS, { final: r2(VENTAS_SEP.q1.final + VENTAS_SEP.q2.final), ivaFinal: r2(VENTAS_SEP.q1.iva + VENTAS_SEP.q2.iva), empresas: baseEmp, ivaEmpresas: ivaEmp, exento: r2(VENTAS_SEP.q1.exento + VENTAS_SEP.q2.exento) });
+    // patente: se paga en Bs · el 4 % de las ventas del mes en el libro (sin IVA) o el mínimo de 20 euros BCV, lo que sea mayor
+    PATENTE.ventas = r2(LIBRO_VENTAS.final + LIBRO_VENTAS.empresas + LIBRO_VENTAS.exento);
+    PATENTE.cuatro = pct(PATENTE.ventas, PATENTE.pct); PATENTE.minimo = r2(PATENTE.minimoEur * TASA.eur); PATENTE.monto = Math.max(PATENTE.cuatro, PATENTE.minimo);
+    // la hoja de IVA de la 2.ª quincena: el débito de los Z y de las facturas a empresas, el IGTF de los Z y el anticipo (1 % de los ingresos)
+    const q2 = VENTAS_SEP.q2, emp2 = VENTAS_EMPRESAS.filter(v => v.quincena === 2);
+    IVA_HOJA.debitos = [['Ventas a consumidor final (los Z)', q2.final, q2.iva], ['Facturas a empresas', r2(emp2.reduce((s, v) => s + v.base, 0)), r2(emp2.reduce((s, v) => s + v.iva, 0))], ['Alícuota adicional 31 % (lujo: va en cero)', 0, 0]];
+    IVA_HOJA.igtf = q2.igtf;
+    IVA_HOJA.anticipo = pct(q2.final + IVA_HOJA.debitos[1][1] + q2.exento, 1);
+  }
+  calcularVentas();
   // aseo urbano: tarifa mensual del IMA en euros (sale de los m² del local y del tipo de actividad), a la tasa euro BCV
   const ASEO = { eur: 18 }; ASEO.monto = r2(ASEO.eur * TASA.eur);
   // la 1.ª quincena de septiembre, ya declarada y pagada (o9): débito de sus ventas − crédito de sus compras = IVA; no quedó excedente
   // la retención de IVA a proveedores es el 75 % de ese crédito; el anticipo de ISLR, el 1 % de los ingresos (ventas y exento)
-  const IVA_Q1 = { credito: 202824.53, igtf: 210480.00 };
-  IVA_Q1.iva = r2(pct(VENTAS_SEP.q1.final, 16) - IVA_Q1.credito);
-  IVA_Q1.anticipo = pct(VENTAS_SEP.q1.final + VENTAS_SEP.q1.exento, 1);
+  // se declaró con los Z que había (14 de 15: el del dom 13 no llegó): esas cifras quedan fijas; si el Z aparece, el libro avisa
+  const IVA_Q1 = { credito: 202824.53, ventas: VENTAS_SEP.q1.final, exento: VENTAS_SEP.q1.exento, igtf: VENTAS_SEP.q1.igtf, zetas: ZETAS.filter(z => z.quincena === 1 && z.base !== null).length };
+  IVA_Q1.iva = r2(pct(IVA_Q1.ventas, 16) - IVA_Q1.credito);
+  IVA_Q1.anticipo = pct(IVA_Q1.ventas + IVA_Q1.exento, 1);
   IVA_Q1.retProv = pct(IVA_Q1.credito, 75);
   IVA_Q1.total = r2(IVA_Q1.iva + IVA_Q1.igtf + IVA_Q1.anticipo + IVA_Q1.retProv);
-  // pensiones de agosto (o10): las quincenas de $ 3.940 a Bs 548,60 (15 ago) y 566,20 (31 ago) y la parte formal del 10 % de agosto
-  const pensionesAgo = pct(r2(3940 * 548.60 + 3940 * 566.20 + diezBs('ago')), 9);
+  // pensiones de agosto (o10): las quincenas de 3.940 $ a 548,60 (15 ago) y 566,20 (31 ago) y la parte formal del 10 % de agosto
+  const pensionesAgo = pct(r2(NF.quincenaUsd * 548.60 + NF.quincenaUsd * 566.20 + diezBs('ago')), 9);
 
   // fechas de octubre 2026 del calendario SENIAT para RIF terminado en 4 (públicas)
+  // el monto de cada una sale de su hoja (nunca se escribe aparte) y es un estimado hasta que se declara
+  // soportes: el certificado de la declaración y el comprobante del pago (el nombre del archivo, o nada si falta) · pagadaEl: el día del pago (su tasa da el «≈ $»)
   const OBLIGACIONES = [
     // o1: el monto es el total de la planilla y lo recalcula la hoja de IVA (pantallas-fiscal.js)
-    { id: 'o1', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 2.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 2.ª quincena', dia: 6, vence: 'Mar 6 oct', faltan: 1, resp: 'Cecilia', estado: 'revision', monto: 3325008.87, paso: 1 },
+    { id: 'o1', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 2.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 2.ª quincena', dia: 6, vence: 'Mar 6 oct', faltan: 1, resp: 'Cecilia', estado: 'revision', monto: null, paso: 1 },
     // o2: la suma de las retenciones de ISLR de septiembre (RET_EMITIDAS, abajo)
     { id: 'o2', nombre: 'Retenciones de ISLR de septiembre', corto: 'Ret. ISLR sep', ente: 'SENIAT', periodo: '2026-09', dia: 6, vence: 'Mar 6 oct', faltan: 1, resp: 'Cecilia', estado: 'preparar', monto: null, paso: 0 },
     { id: 'o3', nombre: 'INCES 3.er trimestre', corto: 'INCES T3', ente: 'INCES', periodo: '2026 · T3', dia: 5, vence: 'Hoy, lun 5 oct', faltan: 0, resp: 'Jose', estado: 'lista', monto: montoDe('o3'), paso: 2 },
@@ -376,68 +482,70 @@ window.DB = (() => {
     { id: 'o7', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 1.ª quinc. oct', ente: 'SENIAT', periodo: '2026-10 · 1.ª quincena', dia: 22, vence: 'Jue 22 oct', faltan: 17, resp: 'Cecilia', estado: 'abierta', monto: null, paso: 0 },
     { id: 'o8', nombre: 'Pensiones (9 % sobre la nómina formal)', corto: 'Pensiones sep', ente: 'SENIAT', periodo: '2026-09', dia: 22, vence: 'Jue 22 oct', faltan: 17, resp: 'Jose', estado: 'preparar', monto: montoDe('o8'), paso: 0 },
     // o9: IVA 2.678.295,47 + IGTF 210.480,00 + anticipo 183.960,00 + retenciones a proveedores 152.118,40 (IVA_Q1, arriba)
-    { id: 'o9', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 1.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 1.ª quincena', dia: 30, mes: 'sep', vence: 'Mié 30 sep', faltan: -5, resp: 'Cecilia', estado: 'pagada', monto: IVA_Q1.total, paso: 4 },
-    // o10: 9 % de Bs 4.803.468,76 (quincenas de $ 3.940 a 548,60 y 566,20, y la parte formal del 10 % de agosto: € 603,40 a 681,40)
-    { id: 'o10', nombre: 'Pensiones de agosto', corto: 'Pensiones ago', ente: 'SENIAT', periodo: '2026-08', dia: 16, mes: 'sep', vence: 'Mié 16 sep', faltan: -19, resp: 'Jose', estado: 'pagada', monto: pensionesAgo, paso: 4 },
+    { id: 'o9', nombre: 'IVA + anticipo ISLR + IGTF + retenciones de IVA', corto: 'IVA 1.ª quinc. sep', ente: 'SENIAT', periodo: '2026-09 · 1.ª quincena', dia: 30, mes: 'sep', vence: 'Mié 30 sep', faltan: -5, resp: 'Cecilia', estado: 'pagada', monto: IVA_Q1.total, paso: 4, planilla: '0001-26-0993771', pagadaEl: '30 sep', soportes: { cert: 'Declaración IVA 1.ª quinc. sep.pdf', pago: 'Pago IVA 1.ª quinc. sep.pdf' } },
+    // o10: 9 % de 4.803.468,76 Bs (quincenas de 3.940 $ a 548,60 y 566,20, y la parte formal del 10 % de agosto: 603,40 € a 681,40)
+    { id: 'o10', nombre: 'Pensiones de agosto', corto: 'Pensiones ago', ente: 'SENIAT', periodo: '2026-08', dia: 16, mes: 'sep', vence: 'Mié 16 sep', faltan: -19, resp: 'Jose', estado: 'pagada', monto: pensionesAgo, paso: 4, planilla: '0002-26-0418806', pagadaEl: '16 sep', soportes: { cert: 'Declaración pensiones de agosto.pdf', pago: 'Pago pensiones de agosto.pdf' } },
     // sinPago: solo se declara · soloPago: solo se paga (no hay planilla que preparar)
     // revisa: quién la revisa, si no es la regla de siempre (prepara Jose → revisa Cecilia, y al revés); el RNET lleva sueldos y Cecilia ve la nómina agrupada
     { id: 'o11', nombre: 'Declaración trimestral RNET (3.er trimestre)', corto: 'RNET T3', ente: 'Ministerio del Trabajo', periodo: '2026 · T3', dia: 15, vence: 'Jue 15 oct', faltan: 10, resp: 'Jose', revisa: 'Alejandro', estado: 'preparar', monto: null, sinPago: true, paso: 0 },
     { id: 'o12', nombre: 'Aseo urbano de octubre', corto: 'Aseo oct', ente: 'Alcaldía (IMA)', periodo: '2026-10', dia: 30, vence: 'Vie 30 oct', faltan: 25, resp: 'Jose', estado: 'preparar', monto: ASEO.monto, soloPago: true, paso: 0 },
   ];
-  // la 2.ª quincena de septiembre: el crédito de las compras sale del libro de compras de la quincena (abajo, con COMPRAS)
-  // excedente: en la 1.ª quincena se pagó IVA, así que no quedó crédito para pasar a esta
-  const IVA_HOJA = {
-    periodo: '2.ª quincena de septiembre (16 al 30)', vence: 'Mar 6 oct',
-    debitos: [['Ventas a consumidor final (los Z)', VENTAS_SEP.q2.final, pct(VENTAS_SEP.q2.final, 16)], ['Facturas a empresas', baseEmp, ivaEmp], ['Alícuota adicional 31 % (lujo: va en cero)', 0, 0]],
-    creditos: [], excedente: 0, igtf: 231840.00,
-    anticipo: pct(VENTAS_SEP.q2.final + baseEmp + VENTAS_SEP.q2.exento, 1), // 1 % de los ingresos de la quincena
-  };
-  const ZETAS = [
-    { id: 'z30', dia: 30, fecha: 'Mié 30 sep', num: 1488, facturas: 241, base: 1321000.00, iva: 211360.00, exento: 32000.00, igtf: 16420.00, estado: 'confirmado', por: 'Jose' },
-    { id: 'z29', dia: 29, fecha: 'Mar 29 sep', num: 1487, facturas: 198, base: 1098000.00, iva: 175680.00, exento: 21000.00, igtf: 14010.00, estado: 'confirmado', por: 'Jose' },
-    { id: 'z28', dia: 28, fecha: 'Lun 28 sep', num: 1486, facturas: 176, base: 964000.00, iva: 154240.00, exento: 18000.00, igtf: 12280.00, estado: 'leido', por: '—' },
-    { id: 'z27', dia: 27, fecha: 'Dom 27 sep', num: null, facturas: null, base: null, iva: null, exento: null, igtf: null, estado: 'falta', por: '—' },
-    { id: 'z26', dia: 26, fecha: 'Sáb 26 sep', num: 1484, facturas: 288, base: 1622000.00, iva: 259520.00, exento: 41000.00, igtf: 20560.00, estado: 'confirmado', por: 'Jose', alerta: 'Salto de número: falta el Z 1485' },
-    { id: 'z25', dia: 25, fecha: 'Vie 25 sep', num: 1483, facturas: 262, base: 1490000.00, iva: 238400.00, exento: 36000.00, igtf: 18840.00, estado: 'confirmado', por: 'Jose' },
-    { id: 'z13', dia: 13, fecha: 'Dom 13 sep', num: null, facturas: null, base: null, iva: null, exento: null, igtf: null, estado: 'falta', por: '—' },
-  ];
+  OBLIGACIONES.forEach(o => { o.soportes = o.soportes || {}; });
+  // los comprobantes de retención que nos mandaron los clientes especiales: cada uno con su fecha, su tasa y la factura que retiene
+  // rr2 y rr3 son de facturas de agosto, que no están en este libro · fv1 (Constructora Delta, 18 sep) todavía espera el suyo
   const RET_RECIBIDAS = [
-    { id: 'rr1', comp: '20260900001877', cliente: 'Clínica Los Mangos', tipo: 'IVA', monto: 37200.00, periodo: '2026-09', estado: 'por_descontar' },
-    { id: 'rr2', comp: '20260900001231', cliente: 'Constructora Delta', tipo: 'IVA', monto: 50400.00, periodo: '2026-09', estado: 'por_descontar' },
-    { id: 'rr3', comp: '20260800000945', cliente: 'Constructora Delta', tipo: 'IVA', monto: 36480.00, periodo: '2026-08', estado: 'por_descontar' },
-    // las de ISLR rebajan el ISLR del año: esta se usó en el de 2025, que se declaró el 11 de marzo
-    { id: 'rr4', comp: '20251100000512', cliente: 'Clínica Los Mangos', tipo: 'ISLR', monto: 6200.00, periodo: '2025-11', estado: 'descontada', usadaEn: 'ISLR de 2025 (declarado el 11 mar)' },
+    { id: 'rr1', comp: '20260900001877', cliente: 'Clínica Los Mangos', tipo: 'IVA', monto: 37200.00, periodo: '2026-09', fecha: '24 sep', factura: '00004433', estado: 'por_descontar' },
+    { id: 'rr2', comp: '20260900001231', cliente: 'Constructora Delta', tipo: 'IVA', monto: 50400.00, periodo: '2026-09', fecha: '2 sep', factura: '00004388', estado: 'por_descontar' },
+    { id: 'rr3', comp: '20260800000945', cliente: 'Constructora Delta', tipo: 'IVA', monto: 36480.00, periodo: '2026-08', fecha: '27 ago', factura: '00004351', estado: 'por_descontar' },
+    // las de ISLR rebajan el ISLR del año: esta se usó en el de 2025, que se declaró el 11 de marzo (la tasa de ese día, inventada)
+    { id: 'rr4', comp: '20251100000512', cliente: 'Clínica Los Mangos', tipo: 'ISLR', monto: 6200.00, periodo: '2025-11', fecha: '18 nov 2025', tasa: 241.30, factura: '00003902', estado: 'descontada', usadaEn: 'ISLR de 2025 (declarado el 11 mar)' },
   ];
-  // libro de compras en Bs: cada factura (en $) a la tasa BCV vigente el día de la factura
-  // (el sábado, el domingo y el lunes vale la que el BCV publicó el viernes) · usd = [base, IVA]
+  RET_RECIBIDAS.forEach(r => { r.rif = (CLIENTES.find(c => c.nombre === r.cliente) || {}).rif || '—'; r.tasa = r.tasa || tasaDel(r.fecha); r.pdf = 'Retención ' + r.comp + '.pdf'; });
+  // la retención de cada factura a empresas la dice su comprobante
+  const retencionDe = v => { const r = RET_RECIBIDAS.find(x => x.factura === v.num && x.tipo === 'IVA' && !['por_aprobar', 'devuelta'].includes(x.estado)); return r ? 'Recibido: ' + dinero(r.monto, 'bs') : v.esp ? 'Esperando su comprobante' : 'No retiene'; };
+  VENTAS_EMPRESAS.forEach(v => { v.retencion = retencionDe(v); });
+  // libro de compras en Bs: cada factura (en $) a la tasa BCV vigente el día de la factura (TASAS_BCV) · usd = [base, IVA]
+  // las dos sin número de control (Hortalizas El Valle y Frutería La Esquina) llevan la retención del 100 % del IVA
   const COMPRAS = [
-    { id: 'lc1', fecha: '28 sep', prov: 'p1', num: 'A-004512', control: '00-118204', tasa: 601.80, usd: [844.83, 135.17], pctRet: 75, comp: '202609-00000041' },
-    { id: 'lc2', fecha: '27 sep', prov: 'p2', num: '000781', control: '00-020781', tasa: 601.80, usd: [295.26, 47.24], pctRet: 75, comp: '202609-00000040' },
-    { id: 'lc3', fecha: '25 sep', prov: 'p12', num: 'DP-3301', control: '00-903301', tasa: 599.45, usd: [1088.79, 174.21], pctRet: 75, comp: '202609-00000039' },
-    { id: 'lc4', fecha: '3 oct', prov: 'p4', num: '0112', control: 'sin control', tasa: 612.40, usd: [205.26, 32.84], pctRet: 100, comp: 'pendiente', alerta: 'Sin número de control: se retiene el 100 %' },
+    { id: 'lc1', fecha: '28 sep', prov: 'p1', num: 'A-004512', control: '00-118204', usd: [844.83, 135.17], pctRet: 75 },
+    { id: 'lc2', fecha: '27 sep', prov: 'p2', num: '000781', control: '00-020781', usd: [295.26, 47.24], pctRet: 75 },
+    { id: 'lc3', fecha: '25 sep', prov: 'p12', num: 'DP-3301', control: '00-903301', usd: [1088.79, 174.21], pctRet: 75 },
+    { id: 'lc4', fecha: '3 oct', prov: 'p4', num: '0112', control: 'sin control', usd: [205.26, 32.84], pctRet: 100, alerta: 'Sin número de control: se retiene el 100 %' },
+    { id: 'lc5', fecha: '4 oct', prov: 'p9', num: '0088', control: 'sin control', usd: [64.05, 10.25], pctRet: 100, alerta: 'Sin número de control: se retiene el 100 %' },
   ];
-  COMPRAS.forEach(c => { c.base = r2(c.usd[0] * c.tasa); c.iva = r2(c.usd[1] * c.tasa); c.retenido = pct(c.iva, c.pctRet); });
+  COMPRAS.forEach(c => { c.tasa = tasaDel(c.fecha); c.base = r2(c.usd[0] * c.tasa); c.iva = r2(c.usd[1] * c.tasa); c.retenido = pct(c.iva, c.pctRet); c.periodo = periodoDe(c.fecha); c.quincena = quincenaDe(c.fecha); });
   // el crédito de la hoja de IVA: el IVA de las compras de la 2.ª quincena de septiembre (16 al 30), que Cecilia escribe desde su libro
-  const enQ2 = c => / sep$/.test(c.fecha) && parseInt(c.fecha, 10) >= 16;
+  const enQ2 = c => c.periodo === '2026-09' && c.quincena === 2;
   IVA_HOJA.creditos = [['Compras del libro de Cecilia', r2(COMPRAS.filter(enQ2).reduce((s, c) => s + c.base, 0)), r2(COMPRAS.filter(enQ2).reduce((s, c) => s + c.iva, 0))]];
-  // las de IVA toman el monto del libro de compras (son las mismas que suma la hoja de IVA); la de ISLR es el 2 % de la base sin IVA, en Bs
+  // las de IVA toman todo de su compra del libro (lc): son las mismas que suma la hoja de IVA; la de ISLR es el 2 % de la base sin IVA, en Bs
   // la de ISLR nace al registrar la factura (pregunta 18 a Cecilia): va en la declaración de retenciones de ISLR de ese mes
+  // borrador: por emitir (las dos del 100 %); el número se asigna al emitirla, el siguiente de la numeración, que no deja huecos
   const RET_EMITIDAS = [
-    { id: 're1', comp: '202609-00000041', tipo: 'IVA 75 %', prov: 'p1', factura: 'A-004512', estado: 'entregada' },
-    { id: 're2', comp: '202609-00000040', tipo: 'IVA 75 %', prov: 'p2', factura: '000781', estado: 'entregada' },
-    { id: 're3', comp: '202609-00000039', tipo: 'IVA 75 %', prov: 'p12', factura: 'DP-3301', estado: 'emitida' },
-    { id: 're4', comp: 'ISLR-2026-09-012', tipo: 'ISLR 2 % servicios', prov: 'p10', factura: '000044', fecha: '15 sep', periodo: '2026-09', tasa: 589.12, baseUsd: 387.93, pctRet: 2, estado: 'emitida' },
+    { id: 're1', comp: '202609-00000041', tipo: 'IVA 75 %', lc: 'lc1', estado: 'entregada' },
+    { id: 're2', comp: '202609-00000040', tipo: 'IVA 75 %', lc: 'lc2', estado: 'entregada' },
+    { id: 're3', comp: '202609-00000039', tipo: 'IVA 75 %', lc: 'lc3', estado: 'emitida' },
+    { id: 're4', comp: 'ISLR-2026-09-012', tipo: 'ISLR 2 % servicios', prov: 'p10', factura: '000044', fecha: '15 sep', baseUsd: 387.93, pctRet: 2, estado: 'emitida' },
+    { id: 're5', comp: null, tipo: 'IVA 100 %', lc: 'lc4', estado: 'borrador' },
+    { id: 're6', comp: null, tipo: 'IVA 100 %', lc: 'lc5', estado: 'borrador' },
   ];
-  RET_EMITIDAS.forEach(r => { const c = COMPRAS.find(x => x.comp === r.comp); if (c) Object.assign(r, { monto: c.retenido, tasa: c.tasa, fecha: c.fecha }); else r.monto = pct(r2(r.baseUsd * r.tasa), r.pctRet); });
+  RET_EMITIDAS.forEach(r => {
+    const c = r.lc && COMPRAS.find(x => x.id === r.lc);
+    if (c) Object.assign(r, { prov: c.prov, factura: c.num, control: c.control, fecha: c.fecha, tasa: c.tasa, base: c.base, iva: c.iva, pctRet: c.pctRet, monto: c.retenido });
+    else { const f = FACTURAS.find(x => x.prov === r.prov && x.num === r.factura); r.control = f ? f.control : '—'; r.tasa = tasaDel(r.fecha); r.base = r2(r.baseUsd * r.tasa); r.monto = pct(r.base, r.pctRet); }
+    r.periodo = periodoDe(r.fecha); r.quincena = quincenaDe(r.fecha);
+  });
+  COMPRAS.forEach(c => { const r = RET_EMITIDAS.find(x => x.lc === c.id); c.comp = r && r.comp ? r.comp : 'pendiente'; });
   // las retenciones de ISLR de septiembre se declaran juntas (o2)
   OBLIGACIONES.find(o => o.id === 'o2').monto = r2(RET_EMITIDAS.filter(r => r.tipo.startsWith('ISLR') && r.periodo === '2026-09').reduce((s, r) => s + r.monto, 0));
   // las retenciones se le pagan al SENIAT, no al proveedor: cada factura lleva la de IVA en «ret» y la de ISLR en «retIslr», en $ a la tasa
   // del día de la factura (la misma con que se calculó en Bs) · su saldo y la línea del lunes ya vienen sin ellas · la de IVA que falta emitir va en «retPend»
-  RET_EMITIDAS.forEach(r => {
-    const f = FACTURAS.find(x => x.prov === r.prov && x.num === r.factura); const c = COMPRAS.find(x => x.comp === r.comp);
-    if (f) f[r.tipo.startsWith('IVA') ? 'ret' : 'retIslr'] = { id: r.id, comp: r.comp, pct: c ? c.pctRet : r.pctRet || 75, bs: r.monto, tasa: r.tasa, fecha: r.fecha, usd: r2(r.monto / r.tasa) };
-  });
-  COMPRAS.filter(c => c.comp === 'pendiente').forEach(c => { const f = FACTURAS.find(x => x.prov === c.prov && x.num === c.num); if (f) f.retPend = { pct: c.pctRet, bs: c.retenido, usd: r2(c.retenido / c.tasa) }; });
+  const enlazarRet = r => {
+    const f = FACTURAS.find(x => x.prov === r.prov && x.num === r.factura); if (!f) return;
+    const usd = r2(r.monto / r.tasa);
+    if (r.estado === 'borrador') { if (r.tipo.startsWith('IVA')) f.retPend = { id: r.id, pct: r.pctRet, bs: r.monto, usd }; return; }
+    delete f.retPend; f[r.tipo.startsWith('IVA') ? 'ret' : 'retIslr'] = { id: r.id, comp: r.comp, pct: r.pctRet, bs: r.monto, tasa: r.tasa, fecha: r.fecha, usd };
+  };
+  RET_EMITIDAS.forEach(enlazarRet);
   const MAQUINAS = [
     { id: 'm1', serial: 'MF-0000-EJEMPLO', modelo: 'Impresora fiscal (Pos&Touch)', ubicacion: 'Caja principal', estado: 'operativa', ultimaZ: 'Z 1488 · 30 sep', inspeccion: '28 sep 2026', vencida: true },
   ];
@@ -449,14 +557,15 @@ window.DB = (() => {
     { id: 'pl5', nombre: 'Conformidad de uso', ente: 'Alcaldía de Valencia', num: 'CU-0000', vence: 'Sin vencimiento', faltan: null, estado: 'vigente', aviso: 0 },
     { id: 'pl6', nombre: 'Publicidad (aviso del toldo)', ente: 'Alcaldía de Valencia', num: '—', vence: '31 dic 2026', faltan: 87, estado: 'en_tramite', aviso: 30, nota: 'El impuesto va aparte: cada mes, o el año entero antes del 31 mar con 15 % de rebaja' },
   ];
-  // [qué, cuánto, estado, pieza] · cada pieza se abre en su ficha (pantallas-fiscal.js)
+  // [qué, cuánto, estado, pieza, quién lo sube] · cada pieza se abre en su ficha (pantallas-fiscal.js) · «cuánto» y «estado» los cuenta Fiscal
+  // de lo que hay (los Z de septiembre, los estados de cuenta, las retenciones del mes): aquí van los de arranque
   const PAQUETE = [
-    ['Reportes Z de septiembre', '28 de 30', 'aviso', 'z'],
-    ['Facturas a empresas', '3 de 3', 'ok', 'empresas'],
-    ['Facturas de proveedores (copia de Odoo)', '184', 'ok', 'compras'],
-    ['Retenciones recibidas', '2 nuevas', 'ok', 'retenciones'],
-    ['Estados de cuenta', '3 de 4 bancos', 'aviso', 'bancos'],
-    ['Nómina formal agrupada por corrida', '3 corridas: 15 sep, 30 sep y el 10 %', 'ok', 'nomina'],
+    ['Reportes Z de septiembre', '28 de 30', 'aviso', 'z', 'Jose'],
+    ['Facturas a empresas', '3 de 3', 'ok', 'empresas', 'Jose'],
+    ['Facturas de proveedores (copia de Odoo)', '184', 'ok', 'compras', 'Jose'],
+    ['Retenciones recibidas', '2 nuevas', 'ok', 'retenciones', 'Cecilia'],
+    ['Estados de cuenta', '3 de 4 bancos', 'aviso', 'bancos', 'Jose'],
+    ['Nómina formal agrupada por corrida', '3 corridas: 15 sep, 30 sep y el 10 %', 'ok', 'nomina', 'Andreina'],
   ];
   const PREGUNTAS = [
     { id: 'q1', texto: '¿Qué recibes cada mes, de quién y cómo?', resp: '', estado: 'abierta' },
@@ -489,12 +598,12 @@ window.DB = (() => {
     { id: 'personal', nombre: 'Personal (expedientes)', n: 236, ven: ['alejandro', 'andreina'], restringida: true }, // expedientes: solo dueño y RRHH (29-ago)
   ];
   const ARCHIVOS = [
-    { id: 'a1', carpeta: 'legal', nombre: 'Permiso de bomberos 2025-2026.pdf', fecha: '21 oct 2025', vence: '21 oct 2026', vinculo: 'Permiso de bomberos', version: 1 },
+    { id: 'a1', carpeta: 'legal', nombre: 'Permiso de bomberos 2025-2026.pdf', fecha: '21 oct 2025', vence: '21 oct 2026', vinculo: 'Permiso de bomberos', abrir: 'permiso:pl1', version: 1 },
     { id: 'a2', carpeta: 'legal', nombre: 'Registro mercantil (acta constitutiva).pdf', fecha: '2 feb 2019', vence: '—', vinculo: '—', version: 1 },
-    { id: 'a3', carpeta: 'fiscal', nombre: 'Z 1488 · 30 sep.jpg', fecha: '1 oct 2026', vence: '—', vinculo: 'Reporte Z del 30 sep', version: 1 },
-    { id: 'a4', carpeta: 'fiscal', nombre: 'Declaración IVA 1.ª quinc. sep.pdf', fecha: '30 sep 2026', vence: '—', vinculo: 'IVA 1.ª quincena sep', version: 1 },
-    { id: 'a5', carpeta: 'facturas', nombre: 'Carnes La Pradera A-004512.jpg', fecha: '28 sep 2026', vence: '—', vinculo: 'Factura A-004512', version: 1 },
-    { id: 'a6', carpeta: 'bancos', nombre: 'Estado de cuenta BVCJ septiembre.pdf', fecha: '2 oct 2026', vence: '—', vinculo: 'Conciliación BVCJ sep', version: 1 },
+    { id: 'a3', carpeta: 'fiscal', nombre: 'Z 1488 · 30 sep.jpg', fecha: '1 oct 2026', vence: '—', vinculo: 'Reporte Z del 30 sep', abrir: 'zeta:z30', version: 1 },
+    { id: 'a4', carpeta: 'fiscal', nombre: 'Declaración IVA 1.ª quinc. sep.pdf', fecha: '30 sep 2026', vence: '—', vinculo: 'IVA 1.ª quincena sep', abrir: 'obligacion:o9', version: 1 },
+    { id: 'a5', carpeta: 'facturas', nombre: 'Carnes La Pradera A-004512.jpg', fecha: '28 sep 2026', vence: '—', vinculo: 'Factura A-004512', abrir: 'factura:f1', version: 1 },
+    { id: 'a6', carpeta: 'bancos', nombre: 'Estado de cuenta BVCJ septiembre.pdf', fecha: '2 oct 2026', vence: '—', vinculo: 'Conciliación BVCJ sep', abrir: 'conciliacion:BVCJ', version: 1 },
     { id: 'a7', carpeta: 'personal', nombre: 'Contrato María Fernández.pdf', fecha: '1 mar 2022', vence: '—', vinculo: 'Ficha de María Fernández', version: 2 },
     { id: 'a8', carpeta: 'comprobantes', nombre: 'Pagos del lunes 28 sep.pdf', fecha: '28 sep 2026', vence: '—', vinculo: 'Lote del 28 sep', version: 1 },
   ];
@@ -504,6 +613,18 @@ window.DB = (() => {
     ['13 jul', 20670], ['20 jul', 21420], ['27 jul', 20280], ['3 ago', 19810], ['10 ago', 19440], ['17 ago', 18620],
     ['24 ago', 18190], ['31 ago', 18470], ['7 sep', 18930], ['14 sep', 18400], ['21 sep', 19340], ['28 sep', 20110],
   ];
+  // la venta neta de cada día de las últimas 4 semanas, en dólares (inventada): cada semana suma lo mismo que SEMANAS, y los domingos
+  // 27 sep y 4 oct son los del parte · con ella sale la venta prudente hasta la nómina (propuesta: la más baja del mismo día en 4 semanas)
+  // d = [día, mes 0-11] · el 7 de septiembre de 2026 es lunes
+  const VENTA_DIAS = [
+    [[7, 8], 2120], [[8, 8], 2200], [[9, 8], 2350], [[10, 8], 2410], [[11, 8], 3380], [[12, 8], 3640], [[13, 8], 2830],
+    [[14, 8], 2060], [[15, 8], 2410], [[16, 8], 2190], [[17, 8], 2330], [[18, 8], 3290], [[19, 8], 3410], [[20, 8], 2710],
+    [[21, 8], 2180], [[22, 8], 2250], [[23, 8], 2390], [[24, 8], 2520], [[25, 8], 3520], [[26, 8], 3617], [[27, 8], 2863],
+    [[28, 8], 2240], [[29, 8], 2310], [[30, 8], 2705], [[1, 9], 2480], [[2, 9], 3610], [[3, 9], 3759], [[4, 9], 3006],
+  ].map(([d, v]) => ({ d, v }));
+  // cómo pagan los clientes, en % de la venta de las últimas 4 semanas (inventado): bolívares (pago móvil, transferencia y punto), Zelle,
+  // Binance y efectivo en dólares (ese va a la bóveda)
+  const MEZCLA_COBROS = { periodo: '7 sep al 4 oct', bs: 64, zelle: 9, binance: 5, efectivo: 22 };
   const PLATOS = [
     ['Parrilla para dos', 412, 18.9], ['Arepa armada', 980, 14.2], ['Cachapa con queso', 640, 8.8], ['Pabellón', 355, 7.1],
     ['Hamburguesa de la casa', 410, 6.5], ['Papelón con limón (jarra)', 520, 4.9], ['Chicharrón', 260, 4.1],
@@ -536,12 +657,20 @@ window.DB = (() => {
     negocio: { nombre: 'Restaurante (nombre de ejemplo)', razon: 'Razón social de ejemplo, C.A.', rif: 'J-0000000-4', zona: 'America/Caracas (UTC−4)', monedaBase: 'Dólar (USD)', carta: 'Euro BCV', espec: 'Sí (contribuyente especial)' },
     sedes: [{ id: 'se1', nombre: 'Valencia', corte: '04:00', direccion: 'Dirección de ejemplo', activa: true }],
     tasas: { fuente: 'BCV por n8n a las 16:00 y 7:30', respaldo: 'Carga a mano si a las 9:00 no llegó', usdt: 'Promedio de compra P2P a las 7:30', finde: 'Vale la última publicada' },
-    legales: [['Salario mínimo', 'Bs 130,00', 'desde mar 2022'], ['Unidad tributaria (UT)', 'Bs 43,00', 'desde 2 jun 2025'], ['Base de pensiones por trabajador', '$ 240', 'desde el período de abril 2026'], ['Cestaticket (bono)', '$ 40', 'a la tasa BCV del día de pago · nunca salió en Gaceta']],
+    legales: [['Salario mínimo', dinero(130, 'bs'), 'desde mar 2022'], ['Unidad tributaria (UT)', dinero(43, 'bs'), 'desde 2 jun 2025'], ['Base de pensiones por trabajador', dinero(240, 'usd', 0), 'desde el período de abril 2026'], ['Cestaticket (bono)', dinero(40, 'usd', 0), 'a la tasa BCV del día de pago · nunca salió en Gaceta']],
     alicuotas: [['IVA general', '16 %'], ['IVA reducida', '8 %'], ['IVA de lujo (16 % + 15 %)', 'No aplica: su lista no trae licores ni comida'], ['IGTF (cobros en divisas)', '3 %'], ['Retención de IVA a proveedores', '75 % (100 % si la factura falla)']],
     metodos: [['Pago móvil Venezolano', 'BVCA'], ['Transferencia Venezolano', 'BVCJ'], ['Punto de venta (terminal 1)', 'BVCA'], ['Zelle', 'ZEL'], ['Binance', 'BIN'], ['Efectivo $', 'Caja → Bóveda'], ['Cuenta de cliente', 'Cobranza']],
-    tiposMov: [['Retiro de socio', 'Aprobación: por decidir (Q1) · foto: sí'], ['Pago a proveedor', 'Aprobación: lote del lunes · comprobante: sí'], ['Traspaso entre cuentas', 'Aprobación: no · comprobante: sí'], ['Gasto de caja chica', 'Aprobación: más de $ 40 · soporte: sí'], ['Plata por rendir', 'Sale de la bóveda · se cierra con las facturas o el vuelto, que registran Jose o Alejandro a nombre de quien rinde'], ['Pasó por la cuenta de un socio', 'Plata del negocio que entró o salió por la cuenta personal de un socio · comprobante: sí · se dice qué socio'], ['Aporte o préstamo de un socio', 'El socio pone plata suya: queda en su cuenta de aportes y préstamos · comprobante: sí'], ['Pago de impuesto', 'Aprobación: sí · planilla: sí'], ['Devolución a cliente', 'Aprobación: Jose o Alejandro · comprobante: sí'], ['Préstamo a empleado', 'Aprobación: Alejandro · autorización firmada: sí'], ['Consumo de socio', 'Viene del POS (método «Consumo socio»)']],
+    tiposMov: [['Retiro de socio', 'Aprobación: por decidir (Q1) · foto: sí'], ['Pago a proveedor', 'Aprobación: lote del lunes · comprobante: sí'], ['Traspaso entre cuentas', 'Aprobación: no · comprobante: sí'], ['Gasto de caja chica', 'Aprobación: más de ' + dinero(40, 'usd', 0) + ' · soporte: sí'], ['Plata por rendir', 'Sale de la bóveda · se cierra con las facturas o el vuelto, que registran Jose o Alejandro a nombre de quien rinde'], ['Pasó por la cuenta de un socio', 'Plata del negocio que entró o salió por la cuenta personal de un socio · comprobante: sí · se dice qué socio'], ['Aporte o préstamo de un socio', 'El socio pone plata suya: queda en su cuenta de aportes y préstamos · comprobante: sí'], ['Pago de impuesto', 'Aprobación: sí · planilla: sí'], ['Devolución a cliente', 'Aprobación: Jose o Alejandro · comprobante: sí'], ['Préstamo a empleado', 'Aprobación: Alejandro · autorización firmada: sí'], ['Consumo de socio', 'Viene del POS (método «Consumo socio»)']],
+    // quién confirma los reportes Z (por decidir: ¿solo Jose, o Jose o Cecilia?): el botón y los textos salen de aquí
+    confirmaZ: ['Jose'],
+    // la meta de comida + personal (costo primo), en % de toda la venta: por fijar hasta que Alejandro la ponga en Parámetros (solo el dueño)
+    metaPrimo: null,
     categorias: ['Proteína', 'Lácteos', 'Vegetales', 'Bebidas', 'Panadería', 'Empaques', 'Limpieza', 'Servicios'],
+    // las mesas de cada área: con esta lista, en la reserva nueva las mesas se tocan (y se ven las libres) en vez de escribirse
+    // es una propuesta: la lista real la carga quien toma las reservas · nombres inventados
+    mesas: { estado: 'propuesta', areas: [['Salón', ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12', 'S13', 'S14']], ['Terraza', ['T1', 'T2', 'T3', 'T4', 'T5', 'T6']], ['Salón privado', ['Privado']], ['Barra', ['B1', 'B2', 'B3', 'B4', 'B5', 'B6']]] },
     reglas: [
+      ['Moneda de cada cifra', 'Lo fiscal (IVA, retenciones, libros, aportes y patente) en bolívares, como se declara. Cada cuenta del banco en su moneda, como su estado de cuenta. Proveedores y pagos en la moneda del trato. Debajo de cada cifra en bolívares va su equivalente en dólares (≈\u00a0$): con la tasa del día del documento (facturas, Z, retenciones, movimientos del banco) o, en lo que falta por pagar, con la de hoy, y lo dice'],
       ['Lista de los lunes', 'Se arma sola el lunes a las 6:00 con todo lo que vence antes del lunes siguiente. Si ese lunes es feriado bancario (en 2026: 12 y 26 oct, 23 nov y 14 dic), lo avisa y propone pagar el martes'],
       ['Plazo por defecto', '7 días (cada proveedor puede tener el suyo)'],
       ['Ventana de deuda', 'Últimos 3 meses'],
@@ -551,19 +680,20 @@ window.DB = (() => {
       ['Salida de Odoo', 'Paralelo cuadrado 2 semanas; precio de recepción igual a la factura ±2 % durante 4 semanas'],
       ['Pendientes', 'Si nadie lo resuelve en 2 días, sube al dueño'],
       ['Aprendiz', '14 días para cada persona nueva: lo que mueve plata pide otra firma'],
+      ['Reportes Z', 'Los sube Jose: es trabajo del local. Los confirma Jose. Por decidir: si también los confirma Cecilia'],
       ['Sesión', 'Se cierra a los 30 min sin uso o a las 12 h'],
       ['Bloqueo', '5 claves o códigos malos: 15 minutos bloqueado (propuesta)'],
       ['Cobranza', 'Recordatorio el lunes tras 15 días; avisos a Jose a los 30, 60 y 90 días'],
       ['Medir una decisión', '4 semanas antes contra 4 semanas después'],
-      ['Consumo de los socios', '$ 500 al mes por socio, a precio de carta. Lo que pase se suma a sus retiros (propuesta). Las invitaciones del negocio no cuentan'],
+      ['Consumo de los socios', dinero(500, 'usd', 0) + ' al mes por socio, a precio de carta. Lo que pase se suma a sus retiros (propuesta). Las invitaciones del negocio no cuentan'],
       ['Préstamos a empleados', 'Hasta 12 cuotas, sin intereses. La suma de descuentos no pasa de un tercio del pago de la quincena (propuesta: confirmar con Cecilia o el abogado)'],
-      ['Adelantos de quincena', 'Se descuentan completos en la quincena siguiente. Hasta $ 60 los aprueba Jose si los anota otra persona; si no, Alejandro'],
+      ['Adelantos de quincena', 'Se descuentan completos en la quincena siguiente. Hasta ' + dinero(60, 'usd', 0) + ' los aprueba Jose si los anota otra persona; si no, Alejandro'],
       ['Consumo del personal', 'Corte el 27 de cada mes; se descuenta en la 2.ª quincena'],
-      ['Reservas', 'Abono de $ 5 por persona para grupos de 10 o más (propuesta)'],
+      ['Reservas', 'Abono de ' + dinero(5, 'usd', 0) + ' por persona para grupos de 10 o más (propuesta)'],
     ],
     antifraude: [
       { id: 'af1', nombre: 'Misma cuenta en dos personas', detalle: 'Una cuenta bancaria en dos empleados, o en un empleado y un proveedor', activa: true },
-      { id: 'af2', nombre: 'Pago grande a cuenta nueva', detalle: 'Más de $ 300 a una cuenta con menos de 7 días', activa: true },
+      { id: 'af2', nombre: 'Pago grande a cuenta nueva', detalle: 'Más de ' + dinero(300, 'usd', 0) + ' a una cuenta con menos de 7 días', activa: true },
       { id: 'af3', nombre: 'Pagos partidos', detalle: 'Varios pagos al mismo beneficiario en 48 h', activa: true },
       { id: 'af4', nombre: 'Cambio de cuenta de un proveedor', detalle: 'Pide código y avisa a Alejandro', activa: true },
       { id: 'af5', nombre: 'Descuadres repetidos', detalle: '3 descuadres de una cajera en 30 días', activa: true },
@@ -607,8 +737,8 @@ window.DB = (() => {
   const AUDITORIA = [
     { id: 'au1', cuando: 'Hoy 7:31', quien: 'bot-caja', tipoActor: 'bot', modulo: 'Caja del día', registro: 'Pago de las 13:42', campo: 'estado', antes: '—', despues: 'por revisar', motivo: '' },
     { id: 'au2', cuando: 'Hoy 7:30', quien: 'n8n-tasas', tipoActor: 'bot', modulo: 'Tasas', registro: 'Dólar BCV 5 oct', campo: 'valor', antes: '—', despues: '612,40', motivo: '' },
-    { id: 'au3', cuando: 'Sáb 3 oct 18:05', quien: 'Luis Roberto', tipoActor: 'persona', modulo: 'Bóveda', registro: 'Retiro de $ 500', campo: 'creado', antes: '—', despues: '$ 500 · 5 billetes', motivo: 'Retiro personal' },
-    { id: 'au4', cuando: 'Jue 1 oct 15:20', quien: 'Jose', tipoActor: 'persona', modulo: 'Proveedores', registro: 'Factura 000781', campo: 'monto', antes: '$ 362,50', despues: '$ 342,50', motivo: 'Devolvimos 2 kg de queso telita en mal estado' },
+    { id: 'au3', cuando: 'Sáb 3 oct 18:05', quien: 'Luis Roberto', tipoActor: 'persona', modulo: 'Bóveda', registro: 'Retiro de ' + dinero(500, 'usd', 0), campo: 'creado', antes: '—', despues: dinero(500, 'usd', 0) + ' · 5 billetes', motivo: 'Retiro personal' },
+    { id: 'au4', cuando: 'Jue 1 oct 15:20', quien: 'Jose', tipoActor: 'persona', modulo: 'Proveedores', registro: 'Factura 000781', campo: 'monto', antes: dinero(362.5, 'usd'), despues: dinero(342.5, 'usd'), motivo: 'Devolvimos 2 kg de queso telita en mal estado' },
     { id: 'au5', cuando: 'Jue 1 oct 11:02', quien: 'Jose', tipoActor: 'persona', modulo: 'Proveedores', registro: 'Hortalizas El Valle', campo: 'cuenta bancaria', antes: 'Provincial •••• 9001', despues: 'Provincial •••• 4404', motivo: 'El proveedor avisó que cambió de banco' },
     { id: 'au6', cuando: 'Mié 30 sep 16:40', quien: 'Cecilia', tipoActor: 'persona', modulo: 'Fiscal', registro: 'IVA 1.ª quinc. sep', campo: 'estado', antes: 'lista para declarar', despues: 'declarada', motivo: 'Planilla del portal adjunta' },
     { id: 'au7', cuando: 'Mar 29 sep 9:15', quien: 'Alejandro', tipoActor: 'persona', modulo: 'Usuarios', registro: 'Cecilia', campo: 'invitación', antes: '—', despues: 'rol Contadora externa', motivo: 'Para que trabaje lo fiscal en la app' },
@@ -620,5 +750,5 @@ window.DB = (() => {
     { cuando: 'Jue 1 oct 22:41', quien: '¿?', que: '3 claves malas para «jose»', donde: 'IP desconocida' },
   ];
 
-  return { HOY, TASA, ROLES, MODULOS, PERMISOS, USUARIOS, SERVICIO, LIMITES, SESIONES, CUENTAS, CAJA, PENDIENTES, PROVEEDORES, FACTURAS, FAC_AGENTE, DEVOLUCIONES, LUNES, CLIENTES, DEVCLIENTES, BOVEDA, CAJACHICA, SOCIOS, RETIROS, POR_RENDIR, CONCILIACION, DIFERENCIAS, EMPLEADOS, NOMINA, PAGO_NOMINA, OBLIGACIONES, IVA_HOJA, IVA_Q1, LIBRO_VENTAS, ZETAS, VENTAS_EMPRESAS, RET_RECIBIDAS, COMPRAS, RET_EMITIDAS, PARAFISCALES, NOMINA_FORMAL, PATENTE, ASEO, MAQUINAS, PERMISOS_LIC, PAQUETE, PREGUNTAS, CARPETAS, ARCHIVOS, SEMANAS, PLATOS, INSUMOS, EVENTOS, DECISIONES, PARAMS, SALUD, FRESCURA, AUDITORIA, ACCESOS };
+  return { HOY, TASA, fmt, dinero, SIN_MONEDA, TASAS_BCV, tasaDel, periodoDe, quincenaDe, calcularVentas, retencionDe, enlazarRet, VENTAS_SEP, ROLES, MODULOS, PERMISOS, USUARIOS, SERVICIO, LIMITES, SESIONES, CUENTAS, CAJA, PENDIENTES, PROVEEDORES, FACTURAS, FAC_AGENTE, DEVOLUCIONES, LUNES, CLIENTES, DEVCLIENTES, BOVEDA, CAJACHICA, SOCIOS, RETIROS, POR_RENDIR, CONCILIACION, DIFERENCIAS, EMPLEADOS, NOMINA, PAGO_NOMINA, OBLIGACIONES, IVA_HOJA, IVA_Q1, LIBRO_VENTAS, ZETAS, VENTAS_EMPRESAS, RET_RECIBIDAS, COMPRAS, RET_EMITIDAS, PARAFISCALES, NOMINA_FORMAL, PATENTE, ASEO, MAQUINAS, PERMISOS_LIC, PAQUETE, PREGUNTAS, CARPETAS, ARCHIVOS, SEMANAS, VENTA_DIAS, MEZCLA_COBROS, PLATOS, INSUMOS, EVENTOS, DECISIONES, PARAMS, SALUD, FRESCURA, AUDITORIA, ACCESOS };
 })();
